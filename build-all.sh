@@ -23,7 +23,17 @@ ln -s ../../libcxxabi libcxxabi
 mkdir ../build
 cd ../build
 
-cmake -DCLANG_DEFAULT_CXX_STDLIB=libc++ -DCLANG_DEFAULT_LINKER=lld -DCLANG_DEFAULT_RTLIB=compiler-rt -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-pc-linux-musl -DDEFAULT_SYSROOT="$DIR"/x86_64-pc-linux-musl/musl -DGCC_INSTALL_PREFIX="$DIR"/x86_64-pc-linux-musl/gcc-stub -DCMAKE_INSTALL_PREFIX="$DIR"/x86_64-pc-linux-musl/llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=X86 -G Ninja ..
+cmake \
+    -DCLANG_DEFAULT_CXX_STDLIB=libc++ \
+    -DCLANG_DEFAULT_LINKER=lld \
+    -DCLANG_DEFAULT_RTLIB=compiler-rt \
+    -DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-pc-linux-musl \
+    -DDEFAULT_SYSROOT="$DIR"/x86_64-pc-linux-musl/musl \
+    -DGCC_INSTALL_PREFIX="$DIR"/x86_64-pc-linux-musl/gcc-stub \
+    -DCMAKE_INSTALL_PREFIX="$DIR"/x86_64-pc-linux-musl/llvm \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_TARGETS_TO_BUILD=X86 \
+    -G Ninja ..
 ninja
 ninja install
 
@@ -39,7 +49,11 @@ for PATCH in "$DIR"/patches/*-musl.patch; do
 done
 cd build
 
-../configure CC='clang' LIBCC="$DIR"/x86_64-pc-linux-musl/llvm/lib/clang/4.0.0/lib/linux/libclang_rt.builtins-x86_64.a --prefix="$DIR"/x86_64-pc-linux-musl/musl --syslibdir="$DIR"/x86_64-pc-linux-musl/musl/lib
+../configure \
+    CC='clang'
+    LIBCC="$DIR"/x86_64-pc-linux-musl/llvm/lib/clang/4.0.0/lib/linux/libclang_rt.builtins-x86_64.a \
+    --prefix="$DIR"/x86_64-pc-linux-musl/musl \
+    --syslibdir="$DIR"/x86_64-pc-linux-musl/musl/lib
 make
 make install
 
