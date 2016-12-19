@@ -1,0 +1,25 @@
+diff --git a/Makefile b/Makefile
+index 8246b78..9dbd5dd 100644
+--- a/Makefile
++++ b/Makefile
+@@ -164,7 +164,7 @@ obj/%.lo: $(srcdir)/%.c $(GENH) $(IMPH)
+ 	$(CC_CMD)
+ 
+ lib/libc.so: $(LOBJS) $(LDSO_OBJS)
+-	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
++	$(CC) $(LDFLAGS_ALL) -nostdlib -shared \
+ 	-Wl,-e,_dlstart -o $@ $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+ 
+ lib/libc.a: $(AOBJS)
+diff --git a/configure b/configure
+index 81e90f7..da0df8d 100755
+--- a/configure
++++ b/configure
+@@ -39,6 +39,7 @@ Optional features:
+ Some influential environment variables:
+   CC                      C compiler command [detected]
+   CFLAGS                  C compiler flags [-Os -pipe ...]
++  LDFLAGS                 linker flags [none]
+   CROSS_COMPILE           prefix for cross compiler and tools [none]
+   LIBCC                   compiler runtime library [detected]
+ 
