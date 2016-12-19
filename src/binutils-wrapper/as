@@ -1,0 +1,4 @@
+#!/bin/sh
+
+OPT="-filetype=obj $(echo $@ | sed 's/--64/-arch=x86-64/')"
+llvm-mc $OPT
