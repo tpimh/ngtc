@@ -3,7 +3,7 @@ Non-GNU toolchain
 
 ## Building
 
-Requirements: C++ compiler, `git`, `ninja`, `make`, 64bit Linux distro, at least 6Gb of RAM and a lot of time.
+Requirements: C++ compiler, `git`, `cmake`, `ninja`, `make`, 64bit Linux distro, at least 6Gb of RAM and a lot of time.
 
 Instructions: run `./build-all.sh`, this will build x86_64 musl-based toolchain and a simple helloworld application.
 
