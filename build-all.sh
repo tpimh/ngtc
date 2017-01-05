@@ -34,6 +34,8 @@ cmake \
     -DGCC_INSTALL_PREFIX="$DIR"/"$ARCH"-pc-linux-musl/gcc-stub \
     -DCMAKE_INSTALL_PREFIX="$DIR"/"$ARCH"-pc-linux-musl/llvm \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_CROSSCOMPILING=ON \
+    -DLLVM_TARGET_ARCH="$ARCH" \
     -DLLVM_TARGETS_TO_BUILD="$TARGETS" \
     -G Ninja ..
 ninja
@@ -52,7 +54,7 @@ done
 cd build
 
 ../configure \
-    CC='clang'
+    CC='clang' \
     LIBCC="$DIR"/"$ARCH"-pc-linux-musl/llvm/lib/clang/4.0.0/lib/linux/libclang_rt.builtins-"$ARCH".a \
     --prefix="$DIR"/"$ARCH"-pc-linux-musl/musl \
     --syslibdir="$DIR"/"$ARCH"-pc-linux-musl/musl/lib
