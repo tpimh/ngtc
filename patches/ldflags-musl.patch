@@ -24,7 +24,7 @@ index 8246b78..508878c 100644
  
  lib/libc.a: $(AOBJS)
 diff --git a/configure b/configure
-index 81e90f7..da0df8d 100755
+index c2db298..9f01ae5 100755
 --- a/configure
 +++ b/configure
 @@ -39,6 +39,7 @@ Optional features:
@@ -35,3 +35,21 @@ index 81e90f7..da0df8d 100755
    CROSS_COMPILE           prefix for cross compiler and tools [none]
    LIBCC                   compiler runtime library [detected]
  
+@@ -337,9 +338,17 @@ tryflag CFLAGS_C99FSE -std=c99
+ tryflag CFLAGS_C99FSE -nostdinc
+ tryflag CFLAGS_C99FSE -ffreestanding \
+ || tryflag CFLAGS_C99FSE -fno-builtin
++
++#
++# Do not check for excess-precision=standard and rounding-math on clang
++# because the test doesn't fail, but clang shows them as
++# unsupported optimization flags
++#
++if test "$cc_family" != clang ; then
+ tryflag CFLAGS_C99FSE -fexcess-precision=standard \
+ || { test "$ARCH" = i386 && tryflag CFLAGS_C99FSE -ffloat-store ; }
+ tryflag CFLAGS_C99FSE -frounding-math
++fi
+ 
+ #
+ # We may use the may_alias attribute if __GNUC__ is defined, so
