@@ -5,13 +5,13 @@ ARCH="x86_64"
 TARGETS="X86"
 
 cd "$DIR"/src
-git clone https://github.com/llvm-mirror/llvm
-git clone https://github.com/llvm-mirror/clang
-git clone https://github.com/llvm-mirror/lld
-git clone https://github.com/llvm-mirror/libunwind
-git clone https://github.com/llvm-mirror/compiler-rt
-git clone https://github.com/llvm-mirror/libcxx
-git clone https://github.com/llvm-mirror/libcxxabi
+git clone --depth 1 https://github.com/llvm-mirror/llvm
+git clone --depth 1 https://github.com/llvm-mirror/clang
+git clone --depth 1 https://github.com/llvm-mirror/lld
+git clone --depth 1 https://github.com/llvm-mirror/libunwind
+git clone --depth 1 https://github.com/llvm-mirror/compiler-rt
+git clone --depth 1 https://github.com/llvm-mirror/libcxx
+git clone --depth 1 https://github.com/llvm-mirror/libcxxabi
 
 cd llvm/tools
 ln -s ../../clang clang
@@ -44,7 +44,7 @@ ninja install
 PATH="$DIR"/"$ARCH"-pc-linux-musl/llvm/bin:"$PATH"
 
 cd ../..
-git clone git://git.musl-libc.org/musl
+git clone --depth 1 git://git.musl-libc.org/musl
 
 mkdir musl/build
 cd musl
