@@ -6,12 +6,19 @@ TARGETS="X86"
 
 cd "$DIR"/src
 git clone https://github.com/llvm-mirror/llvm
+cd llvm; git checkout b28d4b4; cd ..
 git clone https://github.com/llvm-mirror/clang
+cd clang; git checkout da676ad; cd ..
 git clone https://github.com/llvm-mirror/lld
+cd lld; git checkout 5720cb6; cd ..
 git clone https://github.com/llvm-mirror/libunwind
+cd libunwind; git checkout 1041783; cd ..
 git clone https://github.com/llvm-mirror/compiler-rt
+cd compiler-rt; git checkout eebc3a8; cd ..
 git clone https://github.com/llvm-mirror/libcxx
+cd libcxx; git checkout 8fe92cc; cd ..
 git clone https://github.com/llvm-mirror/libcxxabi
+cd libcxxabi; git checkout 1f4def2; cd ..
 
 cd llvm/tools
 ln -s ../../clang clang
