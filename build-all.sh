@@ -31,9 +31,9 @@ cmake \
     -DCLANG_DEFAULT_LINKER=lld \
     -DCLANG_DEFAULT_RTLIB=compiler-rt \
     -DLLVM_DEFAULT_TARGET_TRIPLE="$ARCH"-pc-linux-musl \
-    -DDEFAULT_SYSROOT="$DIR"/"$ARCH"-pc-linux-musl/musl \
+    -DDEFAULT_SYSROOT="$DIR"/"$ARCH"-pc-linux-musl \
     -DGCC_INSTALL_PREFIX="$DIR"/"$ARCH"-pc-linux-musl/gcc-stub \
-    -DCMAKE_INSTALL_PREFIX="$DIR"/"$ARCH"-pc-linux-musl/llvm \
+    -DCMAKE_INSTALL_PREFIX="$DIR"/"$ARCH"-pc-linux-musl \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CROSSCOMPILING=ON \
     -DLLVM_TARGET_ARCH="$ARCH" \
@@ -42,7 +42,7 @@ cmake \
 ninja
 ninja install
 
-PATH="$DIR"/"$ARCH"-pc-linux-musl/llvm/bin:"$PATH"
+PATH="$DIR"/"$ARCH"-pc-linux-musl/bin:"$PATH"
 
 cd ../..
 git clone --depth 1 git://git.musl-libc.org/musl
@@ -56,16 +56,16 @@ cd build
 
 ../configure \
     CC='clang' \
-    LIBCC="$DIR"/"$ARCH"-pc-linux-musl/llvm/lib/clang/"$LLVM_VERSION"/lib/linux/libclang_rt.builtins-"$ARCH".a \
-    --prefix="$DIR"/"$ARCH"-pc-linux-musl/musl \
-    --syslibdir="$DIR"/"$ARCH"-pc-linux-musl/musl/lib
+    LIBCC="$DIR"/"$ARCH"-pc-linux-musl/lib/clang/"$LLVM_VERSION"/lib/linux/libclang_rt.builtins-"$ARCH".a \
+    --prefix="$DIR"/"$ARCH"-pc-linux-musl \
+    --syslibdir="$DIR"/"$ARCH"-pc-linux-musl/lib
 make
 make install
 
 cd ../../startup
 make ARCH="$ARCH"
-make install ARCH="$ARCH" DESTDIR="$DIR"/"$ARCH"-pc-linux-musl/musl/lib
+make install ARCH="$ARCH" DESTDIR="$DIR"/"$ARCH"-pc-linux-musl/lib
 
 cd ../hello
 clang -o hello hello.c
-"$DIR"/"$ARCH"-pc-linux-musl/musl/lib/ld-musl-"$ARCH".so.1 ./hello
+"$DIR"/"$ARCH"-pc-linux-musl/lib/ld-musl-"$ARCH".so.1 ./hello
