@@ -47,12 +47,7 @@ cd ../..
 git clone --depth 1 git://git.musl-libc.org/musl
 
 mkdir musl/build
-cd musl
-for PATCH in "$DIR"/patches/*-musl.patch; do
-  patch -p1 < $PATCH
-done
-cd build
-
+cd musl/build
 ../configure \
     CC='clang' \
     LIBCC=$(clang -print-libgcc-file-name) \
