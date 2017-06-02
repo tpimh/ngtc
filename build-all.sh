@@ -5,13 +5,13 @@ ARCH="x86_64"
 TARGETS="X86"
 
 cd "$DIR"/src
-git clone --depth 1 https://github.com/llvm-mirror/llvm
-git clone --depth 1 https://github.com/llvm-mirror/clang
-git clone --depth 1 https://github.com/llvm-mirror/lld
-git clone --depth 1 https://github.com/llvm-mirror/libunwind
-git clone --depth 1 https://github.com/llvm-mirror/compiler-rt
-git clone --depth 1 https://github.com/llvm-mirror/libcxx
-git clone --depth 1 https://github.com/llvm-mirror/libcxxabi
+git clone --depth 1 http://llvm.org/git/llvm
+git clone --depth 1 http://llvm.org/git/clang
+git clone --depth 1 http://llvm.org/git/lld
+git clone --depth 1 http://llvm.org/git/libunwind
+git clone --depth 1 http://llvm.org/git/compiler-rt
+git clone --depth 1 http://llvm.org/git/libcxx
+git clone --depth 1 http://llvm.org/git/libcxxabi
 
 cd llvm/tools
 ln -s ../../clang clang
