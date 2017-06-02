@@ -61,10 +61,6 @@ cd build
 make
 make install
 
-cd ../../startup
-make ARCH="$ARCH"
-make install ARCH="$ARCH" DESTDIR="$DIR"/"$ARCH"-pc-linux-musl/lib
-
-cd ../hello
+cd ../../hello
 clang -o hello hello.c
 "$DIR"/"$ARCH"-pc-linux-musl/lib/ld-musl-"$ARCH".so.1 ./hello
