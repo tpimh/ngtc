@@ -1,7 +1,6 @@
 #!/bin/sh
 
 DIR="$(dirname "$(readlink -f "$0")")"
-LLVM_VERSION="5.0.0"
 ARCH="x86_64"
 TARGETS="X86"
 
@@ -56,7 +55,7 @@ cd build
 
 ../configure \
     CC='clang' \
-    LIBCC="$DIR"/"$ARCH"-pc-linux-musl/lib/clang/"$LLVM_VERSION"/lib/linux/libclang_rt.builtins-"$ARCH".a \
+    LIBCC=$(clang -print-libgcc-file-name) \
     --prefix="$DIR"/"$ARCH"-pc-linux-musl \
     --syslibdir="$DIR"/"$ARCH"-pc-linux-musl/lib
 make
