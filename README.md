@@ -3,9 +3,9 @@ Non-GNU toolchain
 
 ## Building
 
-Requirements: C++ compiler, `git`, `cmake` 3.5, `ninja`, `make`, 64bit Linux distro, at least 6Gb of RAM and a lot of time.
+Requirements: x86_64 Linux distro with at least 6Gb of RAM and a lot of time.
 
-Instructions: run `./build-all.sh`, this will build x86_64 musl-based toolchain and a simple helloworld application.
+Instructions: run `./build-all.sh`, this will set up the build environment, download toolchain source code and compile it.
 
 ## What is included
 
@@ -21,19 +21,22 @@ Instructions: run `./build-all.sh`, this will build x86_64 musl-based toolchain 
 
 ## What works
 
-- Most applications written in C can be built with NGTC
-
-## What doesn't work
-
-- C++ apps can't be built with NGTC (yet)
-- Linux kernel can't be built with NGTC (yet)
+- C code compilation (requires `CFLAGS="-fPIC"`)
+- C++ code compilation (requires `CXXFLAGS="-fPIC" LDFLAGS="-lunwind"`)
 
 ## Status
 
 ### Platform support
 
-- x86_64
+|  | x86  | ARM |
+| --- | --- | --- |
+| **32 bit**  |  |  |
+| **64 bit**  | + |  |
 
 ### Language support
 
 - C
+- C++
+- (not yet) Rust
+- (not yet) Go
+- (not yet) D
