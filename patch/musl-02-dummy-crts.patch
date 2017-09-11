@@ -1,0 +1,18 @@
+diff --git a/crt/crtbegin.c b/crt/crtbegin.c
+new file mode 100644
+index 00000000..e69de29b
+diff --git a/crt/crtbeginS.c b/crt/crtbeginS.c
+new file mode 100644
+index 00000000..e69de29b
+diff --git a/crt/crtbeginT.c b/crt/crtbeginT.c
+new file mode 100644
+index 00000000..e69de29b
+diff --git a/crt/crtend.c b/crt/crtend.c
+new file mode 100644
+index 00000000..e69de29b
+diff --git a/crt/crtendS.c b/crt/crtendS.c
+new file mode 100644
+index 00000000..e69de29b
+diff --git a/crt/crtendT.c b/crt/crtendT.c
+new file mode 100644
+index 00000000..e69de29b
