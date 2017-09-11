@@ -21,8 +21,8 @@ Instructions: run `./build-all.sh`, this will set up the build environment, down
 
 ## What works
 
-- C code compilation (requires `CFLAGS="-fPIC"`)
-- C++ code compilation (requires `CXXFLAGS="-fPIC" LDFLAGS="-lunwind"`)
+- C code compilation
+- C++ code compilation (requires `LDFLAGS="-lc++ -lunwind"`)
 
 ## Status
 

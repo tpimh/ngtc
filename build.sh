@@ -70,7 +70,6 @@ cd /build/musl || $(echo 'failed to change directory' && exit 1)
 /src/musl/configure \
     LIBCC="$(clang -print-libgcc-file-name)" \
     CC='clang' \
-    CFLAGS='-fPIC' \
     --prefix=/"$ARCH"-pc-linux-musl \
     --syslibdir=/"$ARCH"-pc-linux-musl/lib || exit 43
 make || exit 44
