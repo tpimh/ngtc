@@ -1,0 +1,32 @@
+diff --git a/lib/Driver/ToolChains/Linux.cpp b/lib/Driver/ToolChains/Linux.cpp
+index 1adf9f7..b8671d3 100644
+--- a/lib/Driver/ToolChains/Linux.cpp
++++ b/lib/Driver/ToolChains/Linux.cpp
+@@ -743,6 +743,14 @@ std::string Linux::findLibCxxIncludePath() const {
+   return "";
+ }
+ 
++void Linux::AddCXXStdlibLibArgs(const ArgList &Args,
++                                ArgStringList &CmdArgs) const {
++  // this toolchain only supports libcxx and libcxxabi (which is static, so not required)
++  // linking against libunwind is compulsory for C++ code
++  CmdArgs.push_back("-lc++");
++  CmdArgs.push_back("-lunwind");
++}
++
+ void Linux::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                      llvm::opt::ArgStringList &CC1Args) const {
+   // We need a detected GCC installation on Linux to provide libstdc++'s
+diff --git a/lib/Driver/ToolChains/Linux.h b/lib/Driver/ToolChains/Linux.h
+index 9778c18..b49ba71 100644
+--- a/lib/Driver/ToolChains/Linux.h
++++ b/lib/Driver/ToolChains/Linux.h
+@@ -28,6 +28,8 @@ public:
+   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const override;
+   std::string findLibCxxIncludePath() const override;
++  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
++                           llvm::opt::ArgStringList &CmdArgs) const override;
+   void addLibStdCxxIncludePaths(
+       const llvm::opt::ArgList &DriverArgs,
+       llvm::opt::ArgStringList &CC1Args) const override;

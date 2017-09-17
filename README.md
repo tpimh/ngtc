@@ -22,16 +22,18 @@ Instructions: run `./build-all.sh`, this will set up the build environment, down
 ## What works
 
 - C code compilation
-- C++ code compilation (requires `LDFLAGS="-lc++ -lunwind"`)
+- C++ code compilation
 
 ## Status
 
 ### Platform support
 
 |  | x86  | ARM |
-| --- | --- | --- |
+| --- | :---: | :---: |
 | **32 bit**  |  |  |
 | **64 bit**  | + |  |
+
+- x86_64
 
 ### Language support
 
