@@ -76,8 +76,8 @@ index 0a687f6..e8490d9 100644
  //===----------------------------------------------------------------------===//
  
  #include "sanitizer_common/sanitizer_platform.h"
--#if SANITIZER_FREEBSD || SANITIZER_LINUX
-+#if SANITIZER_FREEBSD || SANITIZER_LINUX && !SANITIZER_NONGNU
+-#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
++#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD && !SANITIZER_NONGNU
  
  #include "msan.h"
  #include "msan_thread.h"
@@ -85,8 +85,8 @@ index 0a687f6..e8490d9 100644
  
  } // namespace __msan
  
--#endif // SANITIZER_FREEBSD || SANITIZER_LINUX
-+#endif // SANITIZER_FREEBSD || SANITIZER_LINUX && !SANITIZER_NONGNU
+-#endif // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
++#endif // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD && !SANITIZER_NONGNU
 diff --git a/lib/sanitizer_common/sanitizer_common_interceptors_ioctl.inc b/lib/sanitizer_common/sanitizer_common_interceptors_ioctl.inc
 index 4ed9afe..64f584e 100644
 --- a/lib/sanitizer_common/sanitizer_common_interceptors_ioctl.inc
