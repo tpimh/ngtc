@@ -1,0 +1,12 @@
+diff --git a/lib/msan/msan_linux.cc b/lib/msan/msan_linux.cc
+index 6be0cd1db..8d176f9d6 100644
+--- a/lib/msan/msan_linux.cc
++++ b/lib/msan/msan_linux.cc
+@@ -26,7 +26,6 @@
+ #include <signal.h>
+ #include <unistd.h>
+ #include <unwind.h>
+-#include <execinfo.h>
+ #include <sys/time.h>
+ #include <sys/resource.h>
+ 
