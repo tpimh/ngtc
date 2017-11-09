@@ -1,5 +1,5 @@
 diff --git a/lib/asan/asan_linux.cc b/lib/asan/asan_linux.cc
-index 6d47ba4..63758bf 100644
+index a949a98..4e8eea5 100644
 --- a/lib/asan/asan_linux.cc
 +++ b/lib/asan/asan_linux.cc
 @@ -39,7 +39,7 @@
@@ -10,8 +10,8 @@ index 6d47ba4..63758bf 100644
 +#if SANITIZER_ANDROID || SANITIZER_FREEBSD || SANITIZER_NONGNU
  #include <ucontext.h>
  extern "C" void* _DYNAMIC;
- #else
-@@ -86,7 +86,7 @@ void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
+ #elif SANITIZER_NETBSD
+@@ -90,7 +90,7 @@ void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
    UNIMPLEMENTED();
  }
  
@@ -20,7 +20,7 @@ index 6d47ba4..63758bf 100644
  // FIXME: should we do anything for Android?
  void AsanCheckDynamicRTPrereqs() {}
  void AsanCheckIncompatibleRT() {}
-@@ -159,7 +159,7 @@ void AsanCheckIncompatibleRT() {
+@@ -172,7 +172,7 @@ void AsanCheckIncompatibleRT() {
      }
    }
  }
@@ -30,10 +30,10 @@ index 6d47ba4..63758bf 100644
  #if !SANITIZER_ANDROID
  void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
 diff --git a/lib/interception/interception_linux.cc b/lib/interception/interception_linux.cc
-index 6e908ac..bf806fb 100644
+index 2378042..363533a 100644
 --- a/lib/interception/interception_linux.cc
 +++ b/lib/interception/interception_linux.cc
-@@ -24,11 +24,11 @@ bool GetRealFunctionAddress(const char *func_name, uptr *func_addr,
+@@ -32,11 +32,11 @@ bool GetRealFunctionAddress(const char *func_name, uptr *func_addr,
    return real == wrapper;
  }
  
@@ -48,7 +48,7 @@ index 6e908ac..bf806fb 100644
  }  // namespace __interception
  
 diff --git a/lib/interception/interception_linux.h b/lib/interception/interception_linux.h
-index 27a66c8..e6b1976 100644
+index 0e15bd8..3652fd6 100644
 --- a/lib/interception/interception_linux.h
 +++ b/lib/interception/interception_linux.h
 @@ -34,14 +34,14 @@ void *GetFuncAddrVer(const char *func_name, const char *ver);
@@ -67,9 +67,9 @@ index 27a66c8..e6b1976 100644
 +#endif  // !defined(__ANDROID__) && defined(__GLIBC__)
  
  #endif  // INTERCEPTION_LINUX_H
- #endif  // __linux__ || __FreeBSD__
+ #endif  // __linux__ || __FreeBSD__ || __NetBSD__
 diff --git a/lib/msan/msan_linux.cc b/lib/msan/msan_linux.cc
-index 0a687f6..e8490d9 100644
+index 4e6321f..6be0cd1 100644
 --- a/lib/msan/msan_linux.cc
 +++ b/lib/msan/msan_linux.cc
 @@ -13,7 +13,7 @@
@@ -123,7 +123,7 @@ index 469c8eb..24f8786 100644
                         void *old_rlim) {
    if (new_rlim) PRE_READ(new_rlim, struct_rlimit64_sz);
 diff --git a/lib/sanitizer_common/sanitizer_linux_libcdep.cc b/lib/sanitizer_common/sanitizer_linux_libcdep.cc
-index 858e4e3..e5e8edf 100644
+index 0dc4375..bdc95bb 100644
 --- a/lib/sanitizer_common/sanitizer_linux_libcdep.cc
 +++ b/lib/sanitizer_common/sanitizer_linux_libcdep.cc
 @@ -14,7 +14,7 @@
@@ -185,7 +185,7 @@ index 858e4e3..e5e8edf 100644
    uptr addr, size;
    GetTls(&addr, &size);
    return size;
-@@ -564,4 +564,4 @@ void SetAbortMessage(const char *str) {}
+@@ -586,4 +586,4 @@ void SetAbortMessage(const char *str) {}
  
  } // namespace __sanitizer
  
@@ -210,10 +210,10 @@ index 81d9164..64651b4 100644
  // But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
  // does not work well and we need to fallback to SizeClassAllocator32.
 diff --git a/lib/sanitizer_common/sanitizer_platform_interceptors.h b/lib/sanitizer_common/sanitizer_platform_interceptors.h
-index 276b5c4..074149f 100644
+index 1b80270..d9bdf16 100644
 --- a/lib/sanitizer_common/sanitizer_platform_interceptors.h
 +++ b/lib/sanitizer_common/sanitizer_platform_interceptors.h
-@@ -36,7 +36,7 @@
+@@ -37,7 +37,7 @@
  # include "sanitizer_platform_limits_posix.h"
  #endif
  
@@ -368,10 +368,10 @@ index 83f4fd2..73e891e 100644
  CHECK_SIZE_AND_OFFSET(_obstack_chunk, limit);
  CHECK_SIZE_AND_OFFSET(_obstack_chunk, prev);
 diff --git a/lib/tsan/rtl/tsan_platform_linux.cc b/lib/tsan/rtl/tsan_platform_linux.cc
-index ead1e57..2c020e3 100644
+index 216eef9..b6b33d0 100644
 --- a/lib/tsan/rtl/tsan_platform_linux.cc
 +++ b/lib/tsan/rtl/tsan_platform_linux.cc
-@@ -284,7 +284,7 @@ void InitializePlatform() {
+@@ -285,7 +285,7 @@ void InitializePlatform() {
  // This is required to properly "close" the fds, because we do not see internal
  // closes within glibc. The code is a pure hack.
  int ExtractResolvFDs(void *state, int *fds, int nfd) {
