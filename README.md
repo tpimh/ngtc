@@ -1,5 +1,8 @@
 # NGTC
+
 Non-GNU toolchain
+
+The goal of this project is to build a toolchain that can build Linux kernel, a minimal userspace (e.g. [nenuzhnix](https://github.com/tpimh/nenuzhnix)) and ultimately itself without using any GNU software. 
 
 ## Building
 
