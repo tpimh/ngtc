@@ -1,0 +1,21 @@
+diff --git a/cmake/Modules/AddCompilerRT.cmake b/cmake/Modules/AddCompilerRT.cmake
+index f81eb33..8d978f9 100644
+--- a/cmake/Modules/AddCompilerRT.cmake
++++ b/cmake/Modules/AddCompilerRT.cmake
+@@ -498,6 +498,7 @@ macro(add_custom_libcxx name prefix)
+     DEPENDS ${LIBCXX_DEPS}
+     PREFIX ${prefix}
+     SOURCE_DIR ${COMPILER_RT_LIBCXX_PATH}
++    BUILD_COMMAND /usr/bin/cmake --build . -- -j1
+     CMAKE_ARGS -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+                ${compiler_args}
+                ${sysroot_arg}
+@@ -507,6 +508,8 @@ macro(add_custom_libcxx name prefix)
+                -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
+                -DLIBCXX_STANDALONE_BUILD=On
++               -DLIBCXX_HAS_MUSL_LIBC=ON
++               -DLIBCXX_HAS_GCC_S_LIB=OFF
+                ${LIBCXX_CMAKE_ARGS}
+     STEP_TARGETS configure build install
+     LOG_BUILD 1

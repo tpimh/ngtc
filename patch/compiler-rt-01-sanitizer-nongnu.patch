@@ -1,8 +1,8 @@
 diff --git a/lib/asan/asan_linux.cc b/lib/asan/asan_linux.cc
-index 047e1db..4eba634 100644
+index 625f32d..500f994 100644
 --- a/lib/asan/asan_linux.cc
 +++ b/lib/asan/asan_linux.cc
-@@ -45,7 +45,7 @@
+@@ -46,7 +46,7 @@
  #include <link.h>
  #endif
  
@@ -11,7 +11,7 @@ index 047e1db..4eba634 100644
  #include <ucontext.h>
  extern "C" void* _DYNAMIC;
  #elif SANITIZER_NETBSD
-@@ -138,7 +138,7 @@ void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
+@@ -139,7 +139,7 @@ void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
    UNIMPLEMENTED();
  }
  
@@ -20,7 +20,7 @@ index 047e1db..4eba634 100644
  // FIXME: should we do anything for Android?
  void AsanCheckDynamicRTPrereqs() {}
  void AsanCheckIncompatibleRT() {}
-@@ -229,7 +229,7 @@ void AsanCheckIncompatibleRT() {
+@@ -230,7 +230,7 @@ void AsanCheckIncompatibleRT() {
      }
    }
  }
@@ -72,6 +72,20 @@ index 98fe51b..719b8e4 100644
  
  #endif  // INTERCEPTION_LINUX_H
  #endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
+diff --git a/lib/msan/msan_interceptors.cc b/lib/msan/msan_interceptors.cc
+index 1084fa8..2da2807 100644
+--- a/lib/msan/msan_interceptors.cc
++++ b/lib/msan/msan_interceptors.cc
+@@ -55,6 +55,9 @@ DECLARE_REAL(SIZE_T, strlen, const char *s)
+ DECLARE_REAL(SIZE_T, strnlen, const char *s, SIZE_T maxlen)
+ DECLARE_REAL(void *, memcpy, void *dest, const void *src, uptr n)
+ DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
++#if SANITIZER_NONGNU
++DECLARE_REAL(int, shmctl, int shmid, int cmd, void *buf)
++#endif
+ 
+ // True if this is a nested interceptor.
+ static THREADLOCAL int in_interceptor_scope;
 diff --git a/lib/msan/msan_linux.cc b/lib/msan/msan_linux.cc
 index 4e6321f..8d176f9 100644
 --- a/lib/msan/msan_linux.cc
@@ -222,7 +236,7 @@ index 334903c..a2a6ffd 100644
  // But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
  // does not work well and we need to fallback to SizeClassAllocator32.
 diff --git a/lib/sanitizer_common/sanitizer_platform_interceptors.h b/lib/sanitizer_common/sanitizer_platform_interceptors.h
-index 7e33fa5..a378b8e 100644
+index 611b275..8cb99c4 100644
 --- a/lib/sanitizer_common/sanitizer_platform_interceptors.h
 +++ b/lib/sanitizer_common/sanitizer_platform_interceptors.h
 @@ -38,7 +38,7 @@
@@ -235,7 +249,7 @@ index 7e33fa5..a378b8e 100644
  #else
  # define SI_LINUX_NOT_ANDROID 0
 diff --git a/lib/sanitizer_common/sanitizer_platform_limits_posix.cc b/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
-index f12e820..77d2f72 100644
+index 94b8f3f..d0380b9 100644
 --- a/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
 +++ b/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
 @@ -138,12 +138,14 @@ typedef struct user_fpregs elf_fpregset_t;
@@ -341,9 +355,9 @@ index f12e820..77d2f72 100644
  CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_type);
 +#endif
  
- COMPILER_CHECK(sizeof(__sanitizer_dirent) <= sizeof(dirent));
- CHECK_SIZE_AND_OFFSET(dirent, d_ino);
-@@ -1127,7 +1132,7 @@ CHECK_SIZE_AND_OFFSET(mntent, mnt_passno);
+ #if SANITIZER_LINUX && (!defined(__ANDROID__) || __ANDROID_API__ >= 21)
+ CHECK_TYPE_SIZE(mmsghdr);
+@@ -1133,7 +1138,7 @@ CHECK_SIZE_AND_OFFSET(mntent, mnt_passno);
  
  CHECK_TYPE_SIZE(ether_addr);
  
@@ -352,7 +366,7 @@ index f12e820..77d2f72 100644
  CHECK_TYPE_SIZE(ipc_perm);
  # if SANITIZER_FREEBSD
  CHECK_SIZE_AND_OFFSET(ipc_perm, key);
-@@ -1188,7 +1193,7 @@ CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_dstaddr);
+@@ -1194,7 +1199,7 @@ CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_dstaddr);
  CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_data);
  #endif
  
@@ -361,7 +375,7 @@ index f12e820..77d2f72 100644
  COMPILER_CHECK(sizeof(__sanitizer_mallinfo) == sizeof(struct mallinfo));
  #endif
  
-@@ -1238,7 +1243,7 @@ COMPILER_CHECK(__sanitizer_XDR_DECODE == XDR_DECODE);
+@@ -1244,7 +1249,7 @@ COMPILER_CHECK(__sanitizer_XDR_DECODE == XDR_DECODE);
  COMPILER_CHECK(__sanitizer_XDR_FREE == XDR_FREE);
  #endif
  
@@ -370,7 +384,7 @@ index f12e820..77d2f72 100644
  COMPILER_CHECK(sizeof(__sanitizer_FILE) <= sizeof(FILE));
  CHECK_SIZE_AND_OFFSET(FILE, _flags);
  CHECK_SIZE_AND_OFFSET(FILE, _IO_read_ptr);
-@@ -1257,7 +1262,7 @@ CHECK_SIZE_AND_OFFSET(FILE, _chain);
+@@ -1263,7 +1268,7 @@ CHECK_SIZE_AND_OFFSET(FILE, _chain);
  CHECK_SIZE_AND_OFFSET(FILE, _fileno);
  #endif
  
