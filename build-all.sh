@@ -16,3 +16,5 @@ cp -r root/* $ROOT
 ./proot -S $ROOT /sbin/apk --no-cache add -t .llvmdeps git patch make cmake ninja clang-static clang-dev linux-headers g++ python
 ./proot -S $ROOT /usr/bin/env -i /bin/sh -l /sync.sh
 ./proot -S $ROOT /usr/bin/env -i /bin/sh -l /build.sh
+
+mv $ROOT/*-pc-linux-musl.tar.gz .

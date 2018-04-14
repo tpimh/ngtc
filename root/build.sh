@@ -76,3 +76,14 @@ cd /build/musl || $(echo 'failed to change directory' && exit 1)
     --syslibdir=/"$ARCH"-pc-linux-musl/lib || exit 43
 make || exit 44
 make install || exit 45
+
+cd /"$ARCH"-pc-linux-musl/bin || $(echo 'failed to change directory' && exit 1)
+ln -s llvm-ar ar
+ln -s llvm-ranlib ranlib
+ln -s llvm-objcopy objcopy
+ln -s llvm-objcopy strip
+ln -s clang cc
+ln -s clang++ c++
+ln -s ld.lld ld
+cd / || $(echo 'failed to change directory' && exit 1)
+tar cvfz "$ARCH"-pc-linux-musl.tar.gz "$ARCH"-pc-linux-musl || exit 46
