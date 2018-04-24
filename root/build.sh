@@ -84,6 +84,8 @@ ln -s llvm-objcopy objcopy
 ln -s llvm-objcopy strip
 ln -s clang cc
 ln -s clang++ c++
+ln -s clang gcc
+ln -s clang++ g++
 ln -s ld.lld ld
 cd / || $(echo 'failed to change directory' && exit 1)
 tar cvfz "$ARCH"-pc-linux-musl.tar.gz "$ARCH"-pc-linux-musl || exit 46
