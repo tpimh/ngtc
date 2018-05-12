@@ -44,6 +44,8 @@ ln -s llvm-ar ar
 ln -s llvm-ranlib ranlib
 ln -s llvm-objcopy objcopy
 ln -s llvm-objcopy strip
+ln -s llvm-objdump objdump
+ln -s llvm-nm nm
 ln -s clang cc
 ln -s clang++ c++
 ln -s ld.lld ld
