@@ -37,4 +37,15 @@ fi
 
 cd /build/llvm || $(echo 'failed to change directory' && exit 1)
 
-ninja -j1 || exit 41
+ninja install || exit 42
+
+cd /"$ARCH"-pc-linux-musl/bin || $(echo 'failed to change directory' && exit 1)
+ln -s llvm-ar ar
+ln -s llvm-ranlib ranlib
+ln -s llvm-objcopy objcopy
+ln -s llvm-objcopy strip
+ln -s clang cc
+ln -s clang++ c++
+ln -s ld.lld ld
+cd / || $(echo 'failed to change directory' && exit 1)
+tar cvfz "$ARCH"-pc-linux-musl.tar.gz "$ARCH"-pc-linux-musl || exit 46
