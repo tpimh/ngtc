@@ -2,4 +2,11 @@ language: generic
 
 sudo: required
 
-script: ./build-all.sh
+jobs:
+  include:
+    - stage: configure
+      script: ./build-all.sh configure
+    - stage: build
+      script: ./build-all.sh build
+    - stage: install
+      script: ./build-all.sh install
