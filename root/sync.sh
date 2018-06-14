@@ -1,17 +1,12 @@
 #!/bin/sh
 
 LLVMREPO='https://git.llvm.org/git'
-MUSLREPO='git://git.musl-libc.org/musl'
-REPOS='llvm clang lld libunwind compiler-rt libcxx libcxxabi musl'
+REPOS='llvm clang lld libunwind compiler-rt libcxx libcxxabi'
 
 clonerepo () {
   echo -n "cloning $1... ";
 
-  if [ "$1" = "musl" ]; then 
-    REPO="$MUSLREPO"
-  else
-    REPO="$LLVMREPO/$1/"
-  fi
+  REPO="$LLVMREPO/$1/"
 
   if ! git clone --depth 1 $REPO &>/dev/null; then
     echo fail
@@ -25,11 +20,7 @@ clonerepo () {
 pullrepo () {
   echo -n "updating $1... "
 
-  if [ "$1" = "musl" ]; then 
-    REPO="$MUSLREPO"
-  else
-    REPO="$LLVMREPO/$1/"
-  fi
+  REPO="$LLVMREPO/$1/"
 
   if ! git -C $1 pull &>/dev/null; then
     echo fail
