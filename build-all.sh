@@ -2,14 +2,19 @@
 
 ROOT='alpine'
 REPO='http://dl-cdn.alpinelinux.org/alpine/edge/main'
-APKVER='2.9.1-r3'
+DM='curl -Sq --progress-bar -O'
+
+export LANG='C'
 
 stage1 () {
   rm -rf $ROOT
   mkdir -p $ROOT
-  wget $REPO/x86_64/apk-tools-static-$APKVER.apk
+  $DM $REPO/x86_64/APKINDEX.tar.gz
+  tar xf APKINDEX.tar.gz APKINDEX
+  APKVER=$(grep -A1 -e 'P:apk-tools-static' APKINDEX | sed -n 's/V:\(.*\)/\1/p')
+  $DM $REPO/x86_64/apk-tools-static-$APKVER.apk
   tar xf apk-tools-static-$APKVER.apk -C root sbin/apk.static 2>/dev/null
-  rm apk-tools-static-$APKVER.apk
+  rm apk-tools-static-$APKVER.apk APKINDEX.tar.gz APKINDEX
   cp -r root/* $ROOT
 
   ./proot -S $ROOT /sbin/apk.static -X $REPO -U --no-cache --allow-untrusted --initdb add alpine-base
