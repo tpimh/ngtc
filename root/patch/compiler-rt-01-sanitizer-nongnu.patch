@@ -1,5 +1,5 @@
 diff --git a/lib/asan/asan_linux.cc b/lib/asan/asan_linux.cc
-index 625f32d..500f994 100644
+index cb0a613..7fcd253 100644
 --- a/lib/asan/asan_linux.cc
 +++ b/lib/asan/asan_linux.cc
 @@ -46,7 +46,7 @@
@@ -73,7 +73,7 @@ index 942c256..9a41048 100644
  #endif  // INTERCEPTION_LINUX_H
  #endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
 diff --git a/lib/msan/msan_interceptors.cc b/lib/msan/msan_interceptors.cc
-index 48d0381..5175dfc 100644
+index f338d42..8d8c159 100644
 --- a/lib/msan/msan_interceptors.cc
 +++ b/lib/msan/msan_interceptors.cc
 @@ -56,6 +56,9 @@ DECLARE_REAL(SIZE_T, strlen, const char *s)
@@ -87,7 +87,7 @@ index 48d0381..5175dfc 100644
  // True if this is a nested interceptor.
  static THREADLOCAL int in_interceptor_scope;
 diff --git a/lib/msan/msan_linux.cc b/lib/msan/msan_linux.cc
-index 973e662..4e83e1a 100644
+index 385a650..cb2a272 100644
 --- a/lib/msan/msan_linux.cc
 +++ b/lib/msan/msan_linux.cc
 @@ -13,7 +13,7 @@
@@ -149,7 +149,7 @@ index 469c8eb..24f8786 100644
                         void *old_rlim) {
    if (new_rlim) PRE_READ(new_rlim, struct_rlimit64_sz);
 diff --git a/lib/sanitizer_common/sanitizer_linux_libcdep.cc b/lib/sanitizer_common/sanitizer_linux_libcdep.cc
-index 20840ce..b5c8d18 100644
+index 4962ff8..018ac7c 100644
 --- a/lib/sanitizer_common/sanitizer_linux_libcdep.cc
 +++ b/lib/sanitizer_common/sanitizer_linux_libcdep.cc
 @@ -15,7 +15,7 @@
@@ -161,8 +161,8 @@ index 20840ce..b5c8d18 100644
  
  #include "sanitizer_allocator_internal.h"
  #include "sanitizer_atomic.h"
-@@ -158,7 +158,7 @@ bool SetEnv(const char *name, const char *value) {
- #endif
+@@ -179,7 +179,7 @@ __attribute__((unused)) static bool GetLibcVersion(int *major, int *minor,
+ }
  
  #if !SANITIZER_FREEBSD && !SANITIZER_ANDROID && !SANITIZER_GO &&               \
 -    !SANITIZER_NETBSD && !SANITIZER_OPENBSD && !SANITIZER_SOLARIS
@@ -170,7 +170,7 @@ index 20840ce..b5c8d18 100644
  static uptr g_tls_size;
  
  #ifdef __i386__
-@@ -218,12 +218,12 @@ void InitTlsSize() {
+@@ -256,12 +256,12 @@ void InitTlsSize() {
  #else
  void InitTlsSize() { }
  #endif  // !SANITIZER_FREEBSD && !SANITIZER_ANDROID && !SANITIZER_GO &&
@@ -185,7 +185,7 @@ index 20840ce..b5c8d18 100644
  // sizeof(struct pthread) from glibc.
  static atomic_uintptr_t thread_descriptor_size;
  
-@@ -398,7 +398,7 @@ int GetSizeFromHdr(struct dl_phdr_info *info, size_t size, void *data) {
+@@ -426,7 +426,7 @@ int GetSizeFromHdr(struct dl_phdr_info *info, size_t size, void *data) {
  
  #if !SANITIZER_GO
  static void GetTls(uptr *addr, uptr *size) {
@@ -194,7 +194,7 @@ index 20840ce..b5c8d18 100644
  # if defined(__x86_64__) || defined(__i386__) || defined(__s390__)
    *addr = ThreadSelf();
    *size = GetTlsSize();
-@@ -442,7 +442,7 @@ static void GetTls(uptr *addr, uptr *size) {
+@@ -470,7 +470,7 @@ static void GetTls(uptr *addr, uptr *size) {
  #elif SANITIZER_OPENBSD
    *addr = 0;
    *size = 0;
@@ -203,7 +203,7 @@ index 20840ce..b5c8d18 100644
    *addr = 0;
    *size = 0;
  #elif SANITIZER_SOLARIS
-@@ -458,7 +458,7 @@ static void GetTls(uptr *addr, uptr *size) {
+@@ -486,7 +486,7 @@ static void GetTls(uptr *addr, uptr *size) {
  #if !SANITIZER_GO
  uptr GetTlsSize() {
  #if SANITIZER_FREEBSD || SANITIZER_ANDROID || SANITIZER_NETBSD ||              \
@@ -231,7 +231,7 @@ index d81e255..13ccee7 100644
  // But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
  // does not work well and we need to fallback to SizeClassAllocator32.
 diff --git a/lib/sanitizer_common/sanitizer_platform_interceptors.h b/lib/sanitizer_common/sanitizer_platform_interceptors.h
-index 89c0f9d..31c8fa0 100644
+index f95539a..8def5f7 100644
 --- a/lib/sanitizer_common/sanitizer_platform_interceptors.h
 +++ b/lib/sanitizer_common/sanitizer_platform_interceptors.h
 @@ -39,7 +39,7 @@
@@ -244,7 +244,7 @@ index 89c0f9d..31c8fa0 100644
  #else
  # define SI_LINUX_NOT_ANDROID 0
 diff --git a/lib/sanitizer_common/sanitizer_platform_limits_posix.cc b/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
-index c27055f..b82c9c1 100644
+index edc744a..b2628ce 100644
 --- a/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
 +++ b/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
 @@ -138,12 +138,14 @@ typedef struct user_fpregs elf_fpregset_t;
@@ -343,7 +343,7 @@ index c27055f..b82c9c1 100644
  
 -#if SANITIZER_LINUX
 +#if SANITIZER_LINUX && !SANITIZER_NONGNU
- COMPILER_CHECK(sizeof(__sanitizer_mallinfo) == sizeof(struct mallinfo));
+ COMPILER_CHECK(sizeof(__sanitizer_struct_mallinfo) == sizeof(struct mallinfo));
  #endif
  
 @@ -1255,7 +1259,7 @@ COMPILER_CHECK(__sanitizer_XDR_DECODE == XDR_DECODE);
