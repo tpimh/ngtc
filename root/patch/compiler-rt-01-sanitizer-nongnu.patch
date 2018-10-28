@@ -1,5 +1,5 @@
 diff --git a/lib/asan/asan_linux.cc b/lib/asan/asan_linux.cc
-index cb0a613..7fcd253 100644
+index 625f32d..500f994 100644
 --- a/lib/asan/asan_linux.cc
 +++ b/lib/asan/asan_linux.cc
 @@ -46,7 +46,7 @@
@@ -50,7 +50,7 @@ index 26bfcd8..12d7fe1 100644
  }  // namespace __interception
  
 diff --git a/lib/interception/interception_linux.h b/lib/interception/interception_linux.h
-index 942c256..9a41048 100644
+index 765a186..4db7bee 100644
 --- a/lib/interception/interception_linux.h
 +++ b/lib/interception/interception_linux.h
 @@ -35,15 +35,15 @@ void *GetFuncAddrVer(const char *func_name, const char *ver);
@@ -62,7 +62,7 @@ index 942c256..9a41048 100644
 +// Android,  Solaris, OpenBSD and musl do not have dlvsym
 +#if !SANITIZER_ANDROID && !SANITIZER_SOLARIS && !SANITIZER_OPENBSD && !SANITIZER_NONGNU
  #define INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver) \
-   (::__interception::real_##func = (func##_f)(                \
+   (::__interception::real_##func = (func##_type)(                \
         unsigned long)::__interception::GetFuncAddrVer(#func, symver))
  #else
  #define INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver) \
@@ -149,7 +149,7 @@ index 469c8eb..24f8786 100644
                         void *old_rlim) {
    if (new_rlim) PRE_READ(new_rlim, struct_rlimit64_sz);
 diff --git a/lib/sanitizer_common/sanitizer_linux_libcdep.cc b/lib/sanitizer_common/sanitizer_linux_libcdep.cc
-index 4962ff8..018ac7c 100644
+index 93b68ed..da5dca4 100644
 --- a/lib/sanitizer_common/sanitizer_linux_libcdep.cc
 +++ b/lib/sanitizer_common/sanitizer_linux_libcdep.cc
 @@ -15,7 +15,7 @@
@@ -213,7 +213,7 @@ index 4962ff8..018ac7c 100644
    GetTls(&addr, &size);
    return size;
 diff --git a/lib/sanitizer_common/sanitizer_platform.h b/lib/sanitizer_common/sanitizer_platform.h
-index d81e255..13ccee7 100644
+index 106a147..1edb1e1 100644
 --- a/lib/sanitizer_common/sanitizer_platform.h
 +++ b/lib/sanitizer_common/sanitizer_platform.h
 @@ -214,6 +214,13 @@
@@ -244,7 +244,7 @@ index f95539a..8def5f7 100644
  #else
  # define SI_LINUX_NOT_ANDROID 0
 diff --git a/lib/sanitizer_common/sanitizer_platform_limits_posix.cc b/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
-index edc744a..b2628ce 100644
+index cd1b73d..2e778e9 100644
 --- a/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
 +++ b/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
 @@ -138,12 +138,14 @@ typedef struct user_fpregs elf_fpregset_t;
@@ -326,9 +326,9 @@ index edc744a..b2628ce 100644
  CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_type);
 +#endif
  
- #if SANITIZER_LINUX && (!defined(__ANDROID__) || __ANDROID_API__ >= 21)
- CHECK_TYPE_SIZE(mmsghdr);
-@@ -1144,7 +1148,7 @@ CHECK_SIZE_AND_OFFSET(mntent, mnt_passno);
+ #ifndef __GLIBC_PREREQ
+ #define __GLIBC_PREREQ(x, y) 0
+@@ -1145,7 +1149,7 @@ CHECK_SIZE_AND_OFFSET(mntent, mnt_passno);
  
  CHECK_TYPE_SIZE(ether_addr);
  
@@ -337,7 +337,7 @@ index edc744a..b2628ce 100644
  CHECK_TYPE_SIZE(ipc_perm);
  # if SANITIZER_FREEBSD
  CHECK_SIZE_AND_OFFSET(ipc_perm, key);
-@@ -1205,7 +1209,7 @@ CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_dstaddr);
+@@ -1206,7 +1210,7 @@ CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_dstaddr);
  CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_data);
  #endif
  
@@ -346,7 +346,7 @@ index edc744a..b2628ce 100644
  COMPILER_CHECK(sizeof(__sanitizer_struct_mallinfo) == sizeof(struct mallinfo));
  #endif
  
-@@ -1255,7 +1259,7 @@ COMPILER_CHECK(__sanitizer_XDR_DECODE == XDR_DECODE);
+@@ -1256,7 +1260,7 @@ COMPILER_CHECK(__sanitizer_XDR_DECODE == XDR_DECODE);
  COMPILER_CHECK(__sanitizer_XDR_FREE == XDR_FREE);
  #endif
  
@@ -355,7 +355,7 @@ index edc744a..b2628ce 100644
  COMPILER_CHECK(sizeof(__sanitizer_FILE) <= sizeof(FILE));
  CHECK_SIZE_AND_OFFSET(FILE, _flags);
  CHECK_SIZE_AND_OFFSET(FILE, _IO_read_ptr);
-@@ -1274,7 +1278,7 @@ CHECK_SIZE_AND_OFFSET(FILE, _chain);
+@@ -1275,7 +1279,7 @@ CHECK_SIZE_AND_OFFSET(FILE, _chain);
  CHECK_SIZE_AND_OFFSET(FILE, _fileno);
  #endif
  
@@ -365,10 +365,10 @@ index edc744a..b2628ce 100644
  CHECK_SIZE_AND_OFFSET(_obstack_chunk, limit);
  CHECK_SIZE_AND_OFFSET(_obstack_chunk, prev);
 diff --git a/lib/tsan/rtl/tsan_platform_linux.cc b/lib/tsan/rtl/tsan_platform_linux.cc
-index de989b7..51a97b5 100644
+index d2ce607..b57e95c 100644
 --- a/lib/tsan/rtl/tsan_platform_linux.cc
 +++ b/lib/tsan/rtl/tsan_platform_linux.cc
-@@ -294,7 +294,7 @@ void InitializePlatform() {
+@@ -302,7 +302,7 @@ void InitializePlatform() {
  // This is required to properly "close" the fds, because we do not see internal
  // closes within glibc. The code is a pure hack.
  int ExtractResolvFDs(void *state, int *fds, int nfd) {
