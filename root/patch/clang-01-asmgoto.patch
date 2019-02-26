@@ -137,7 +137,7 @@ index a4a31822..589f3f32 100644
  
    def error_inoutput_conflict_with_clobber : Error<
 diff --git a/include/clang/Sema/Sema.h b/include/clang/Sema/Sema.h
-index f6eee838..669cabb9 100644
+index f6eee838..e5ed2c3f 100644
 --- a/include/clang/Sema/Sema.h
 +++ b/include/clang/Sema/Sema.h
 @@ -3935,6 +3935,7 @@ public:
@@ -148,7 +148,16 @@ index f6eee838..669cabb9 100644
                               SourceLocation RParenLoc);
  
    void FillInlineAsmIdentifierInfo(Expr *Res,
-@@ -10215,9 +10216,8 @@ public:
+@@ -10194,8 +10195,6 @@ public:
+ 
+     DeviceDiagBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
+                       FunctionDecl *Fn, Sema &S);
+-    DeviceDiagBuilder(DeviceDiagBuilder &&D);
+-    DeviceDiagBuilder(const DeviceDiagBuilder &) = default;
+     ~DeviceDiagBuilder();
+ 
+     /// Convertible to bool: True if we immediately emitted an error, false if
+@@ -10215,9 +10214,8 @@ public:
                                                 const T &Value) {
        if (Diag.ImmediateDiag.hasValue())
          *Diag.ImmediateDiag << Value;
@@ -160,7 +169,7 @@ index f6eee838..669cabb9 100644
        return Diag;
      }
  
-@@ -10231,7 +10231,7 @@ public:
+@@ -10231,7 +10229,7 @@ public:
      // Invariant: At most one of these Optionals has a value.
      // FIXME: Switch these to a Variant once that exists.
      llvm::Optional<SemaDiagnosticBuilder> ImmediateDiag;
@@ -992,10 +1001,10 @@ index 2234d6ba..74fbdeeb 100644
    }
  }
 diff --git a/lib/Sema/Sema.cpp b/lib/Sema/Sema.cpp
-index da87e156..adb8c9b0 100644
+index da87e156..bb1e2642 100644
 --- a/lib/Sema/Sema.cpp
 +++ b/lib/Sema/Sema.cpp
-@@ -1402,9 +1402,7 @@ Sema::DeviceDiagBuilder::DeviceDiagBuilder(Kind K, SourceLocation Loc,
+@@ -1402,23 +1402,11 @@ Sema::DeviceDiagBuilder::DeviceDiagBuilder(Kind K, SourceLocation Loc,
      break;
    case K_Deferred:
      assert(Fn && "Must have a function to attach the deferred diag to.");
@@ -1006,7 +1015,21 @@ index da87e156..adb8c9b0 100644
      break;
    }
  }
-@@ -1428,9 +1426,9 @@ Sema::DeviceDiagBuilder::~DeviceDiagBuilder() {
+ 
+-Sema::DeviceDiagBuilder::DeviceDiagBuilder(DeviceDiagBuilder &&D)
+-    : S(D.S), Loc(D.Loc), DiagID(D.DiagID), Fn(D.Fn),
+-      ShowCallStack(D.ShowCallStack), ImmediateDiag(D.ImmediateDiag),
+-      PartialDiagId(D.PartialDiagId) {
+-  // Clean the previous diagnostics.
+-  D.ShowCallStack = false;
+-  D.ImmediateDiag.reset();
+-  D.PartialDiagId.reset();
+-}
+-
+ Sema::DeviceDiagBuilder::~DeviceDiagBuilder() {
+   if (ImmediateDiag) {
+     // Emit our diagnostic and, if it was a warning or error, output a callstack
+@@ -1428,9 +1416,9 @@ Sema::DeviceDiagBuilder::~DeviceDiagBuilder() {
      ImmediateDiag.reset(); // Emit the immediate diag.
      if (IsWarningOrError && ShowCallStack)
        emitCallStackNotes(S, Fn);
@@ -1019,7 +1042,7 @@ index da87e156..adb8c9b0 100644
    }
  }
  
-@@ -1499,12 +1497,10 @@ void Sema::markKnownEmitted(
+@@ -1499,12 +1487,10 @@ void Sema::markKnownEmitted(
    }
  }
  
@@ -1165,6 +1188,33 @@ index e1ea3b66..47ca65c8 100644
    return NS;
  }
  
+diff --git a/lib/Sema/SemaType.cpp b/lib/Sema/SemaType.cpp
+index f314cb0a..090d9431 100644
+--- a/lib/Sema/SemaType.cpp
++++ b/lib/Sema/SemaType.cpp
+@@ -2250,13 +2250,15 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
+   }
+ 
+   if (T->isVariableArrayType() && !Context.getTargetInfo().isVLASupported()) {
+-    // CUDA device code and some other targets don't support VLAs.
+-    targetDiag(Loc, (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+-                        ? diag::err_cuda_vla
+-                        : diag::err_vla_unsupported)
+-        << ((getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+-                ? CurrentCUDATarget()
+-                : CFT_InvalidTarget);
++    if (getLangOpts().CUDA) {
++      // CUDA device code doesn't support VLAs.
++      CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget();
++    } else if (!getLangOpts().OpenMP ||
++               shouldDiagnoseTargetSupportFromOpenMP()) {
++      // Some targets don't support VLAs.
++      Diag(Loc, diag::err_vla_unsupported);
++      return QualType();
++    }
+   }
+ 
+   // If this is not C99, extwarn about VLA's and C99 array size modifiers.
 diff --git a/lib/Sema/TreeTransform.h b/lib/Sema/TreeTransform.h
 index 386b23db..45123b6b 100644
 --- a/lib/Sema/TreeTransform.h
@@ -1405,6 +1455,29 @@ index 35668790..ea3b96f6 100644
 +  asm goto("testl %0, %0; jne %l1;" :: "r"(cond)::label_true);
 +label_true:
    return;
+ }
+ 
+diff --git a/test/OpenMP/target_vla_messages.cpp b/test/OpenMP/target_vla_messages.cpp
+index 30a27517..b744081e 100644
+--- a/test/OpenMP/target_vla_messages.cpp
++++ b/test/OpenMP/target_vla_messages.cpp
+@@ -47,7 +47,7 @@ void target_template(int arg) {
+ #pragma omp target
+   {
+ #ifdef NO_VLA
+-    // expected-error@+2 2 {{variable length arrays are not supported for the current target}}
++    // expected-error@+2 {{variable length arrays are not supported for the current target}}
+ #endif
+     T vla[arg];
+   }
+@@ -73,9 +73,6 @@ void target(int arg) {
+     }
+   }
+ 
+-#ifdef NO_VLA
+-    // expected-note@+2 {{in instantiation of function template specialization 'target_template<long>' requested here}}
+-#endif
+   target_template<long>(arg);
  }
  
 diff --git a/test/PCH/asm.h b/test/PCH/asm.h
@@ -1793,3 +1866,30 @@ index 20c5c448..00000000
 -// expected-note@78 {{called by 'm'}}
 -// expected-note@79 {{called by 'm'}}
 -#endif
+diff --git a/test/SemaCUDA/vla.cu b/test/SemaCUDA/vla.cu
+index cf3054cd..b65ae5e5 100644
+--- a/test/SemaCUDA/vla.cu
++++ b/test/SemaCUDA/vla.cu
+@@ -1,9 +1,5 @@
+ // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -verify %s
+-// RUN: %clang_cc1 -triple x86_64-unknown-linux -verify -DHOST %s
+-
+-#ifndef __CUDA_ARCH__
+-// expected-no-diagnostics
+-#endif
++// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -verify -DHOST %s
+ 
+ #include "Inputs/cuda.h"
+ 
+@@ -12,10 +8,7 @@ void host(int n) {
+ }
+ 
+ __device__ void device(int n) {
+-  int x[n];
+-#ifdef __CUDA_ARCH__
+-  // expected-error@-2 {{cannot use variable-length arrays in __device__ functions}}
+-#endif
++  int x[n];  // expected-error {{cannot use variable-length arrays in __device__ functions}}
+ }
+ 
+ __host__ __device__ void hd(int n) {
