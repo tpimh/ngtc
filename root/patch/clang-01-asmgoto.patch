@@ -103,15 +103,12 @@ index 5ddae84c..7e2d09e5 100644
  
  let CategoryName = "Parse Issue" in {
 diff --git a/include/clang/Basic/DiagnosticSemaKinds.td b/include/clang/Basic/DiagnosticSemaKinds.td
-index a4a31822..589f3f32 100644
+index 5e6eacc7..ed5b85f0 100644
 --- a/include/clang/Basic/DiagnosticSemaKinds.td
 +++ b/include/clang/Basic/DiagnosticSemaKinds.td
-@@ -5023,14 +5023,14 @@ def warn_cxx98_compat_switch_into_protected_scope : Warning<
-   "jump from switch statement to this case label is incompatible with C++98">,
-   InGroup<CXX98Compat>, DefaultIgnore;
+@@ -5028,12 +5028,12 @@ def warn_cxx98_compat_switch_into_protected_scope : Warning<
  def err_indirect_goto_without_addrlabel : Error<
--  "indirect goto in function with no address-of-label expressions">;
-+  "%select{indirect|asm}0 goto in function with no %select{address-of-label expressions|label}0">;
+   "indirect goto in function with no address-of-label expressions">;
  def err_indirect_goto_in_protected_scope : Error<
 -  "cannot jump from this indirect goto statement to one of its possible targets">;
 +  "cannot jump from this %select{indirect|asm}0 goto statement to one of its possible targets">;
@@ -125,7 +122,7 @@ index a4a31822..589f3f32 100644
  def note_protected_by_variable_init : Note<
    "jump bypasses variable initialization">;
  def note_protected_by_variable_nontriv_destructor : Note<
-@@ -7428,6 +7428,10 @@ let CategoryName = "Inline Assembly Issue" in {
+@@ -7435,6 +7435,10 @@ let CategoryName = "Inline Assembly Issue" in {
      "use constraint modifier \"%0\"">;
    def note_asm_input_duplicate_first : Note<
      "constraint '%0' is already present here">;
@@ -137,10 +134,10 @@ index a4a31822..589f3f32 100644
  
    def error_inoutput_conflict_with_clobber : Error<
 diff --git a/include/clang/Sema/Sema.h b/include/clang/Sema/Sema.h
-index f6eee838..e5ed2c3f 100644
+index 5ead2c0c..a8d71317 100644
 --- a/include/clang/Sema/Sema.h
 +++ b/include/clang/Sema/Sema.h
-@@ -3935,6 +3935,7 @@ public:
+@@ -3950,6 +3950,7 @@ public:
                               unsigned NumInputs, IdentifierInfo **Names,
                               MultiExprArg Constraints, MultiExprArg Exprs,
                               Expr *AsmString, MultiExprArg Clobbers,
@@ -148,41 +145,11 @@ index f6eee838..e5ed2c3f 100644
                               SourceLocation RParenLoc);
  
    void FillInlineAsmIdentifierInfo(Expr *Res,
-@@ -10194,8 +10195,6 @@ public:
- 
-     DeviceDiagBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
-                       FunctionDecl *Fn, Sema &S);
--    DeviceDiagBuilder(DeviceDiagBuilder &&D);
--    DeviceDiagBuilder(const DeviceDiagBuilder &) = default;
-     ~DeviceDiagBuilder();
- 
-     /// Convertible to bool: True if we immediately emitted an error, false if
-@@ -10215,9 +10214,8 @@ public:
-                                                const T &Value) {
-       if (Diag.ImmediateDiag.hasValue())
-         *Diag.ImmediateDiag << Value;
--      else if (Diag.PartialDiagId.hasValue())
--        Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second
--            << Value;
-+      else if (Diag.PartialDiag.hasValue())
-+        *Diag.PartialDiag << Value;
-       return Diag;
-     }
- 
-@@ -10231,7 +10229,7 @@ public:
-     // Invariant: At most one of these Optionals has a value.
-     // FIXME: Switch these to a Variant once that exists.
-     llvm::Optional<SemaDiagnosticBuilder> ImmediateDiag;
--    llvm::Optional<unsigned> PartialDiagId;
-+    llvm::Optional<PartialDiagnostic> PartialDiag;
-   };
- 
-   /// Indicate that this function (and thus everything it transtively calls)
 diff --git a/lib/AST/ASTImporter.cpp b/lib/AST/ASTImporter.cpp
-index 10346941..c4a6485f 100644
+index 8a452c26..b31e9e37 100644
 --- a/lib/AST/ASTImporter.cpp
 +++ b/lib/AST/ASTImporter.cpp
-@@ -5634,12 +5634,17 @@ ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
+@@ -5610,12 +5610,17 @@ ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
        return InputOrErr.takeError();
    }
  
@@ -202,7 +169,7 @@ index 10346941..c4a6485f 100644
      return std::move(Err);
  
    ExpectedSLoc AsmLocOrErr = import(S->getAsmLoc());
-@@ -5665,6 +5670,7 @@ ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
+@@ -5641,6 +5646,7 @@ ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
        *AsmStrOrErr,
        S->getNumClobbers(),
        Clobbers.data(),
@@ -343,19 +310,21 @@ index acf19aaa..2307bd79 100644
    if (Policy.IncludeNewlines) OS << NL;
  }
 diff --git a/lib/AST/StmtProfile.cpp b/lib/AST/StmtProfile.cpp
-index e302b058..219fec8d 100644
+index c064ea90..e1133ff5 100644
 --- a/lib/AST/StmtProfile.cpp
 +++ b/lib/AST/StmtProfile.cpp
-@@ -321,6 +321,7 @@ void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
+@@ -321,6 +321,9 @@ void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
    ID.AddInteger(S->getNumClobbers());
    for (unsigned I = 0, N = S->getNumClobbers(); I != N; ++I)
      VisitStringLiteral(S->getClobberStringLiteral(I));
 +  ID.AddInteger(S->getNumLabels());
++  for (auto *L : S->labels())
++    VisitDecl(L->getLabel());
  }
  
  void StmtProfiler::VisitMSAsmStmt(const MSAsmStmt *S) {
 diff --git a/lib/Analysis/CFG.cpp b/lib/Analysis/CFG.cpp
-index f6b82914..afb4d4fb 100644
+index f6b82914..27d374dd 100644
 --- a/lib/Analysis/CFG.cpp
 +++ b/lib/Analysis/CFG.cpp
 @@ -548,6 +548,7 @@ private:
@@ -366,7 +335,7 @@ index f6b82914..afb4d4fb 100644
    CFGBlock *VisitIfStmt(IfStmt *I);
    CFGBlock *VisitImplicitCastExpr(ImplicitCastExpr *E, AddStmtChoice asc);
    CFGBlock *VisitConstantExpr(ConstantExpr *E, AddStmtChoice asc);
-@@ -1440,24 +1441,41 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
+@@ -1440,22 +1441,38 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
                                     E = BackpatchBlocks.end(); I != E; ++I ) {
  
      CFGBlock *B = I->block;
@@ -386,46 +355,42 @@ index f6b82914..afb4d4fb 100644
 -        B, I->scopePosition, JT.scopePosition);
 -    appendScopeBegin(JT.block, VD, G);
 -    addSuccessor(B, JT.block);
-+    auto BuildCFGForLabel = [&](JumpTarget JT, CFGBlock *B,
-+                                CFGTerminator TG,
-+                                BackpatchBlocksTy::iterator I) {
-+      prependAutomaticObjLifetimeWithTerminator(B, I->scopePosition,
-+                                                JT.scopePosition);
-+      prependAutomaticObjDtorsWithTerminator(B, I->scopePosition,
-+                                             JT.scopePosition);
-+      const VarDecl *VD = prependAutomaticObjScopeEndWithTerminator(
-+          B, I->scopePosition, JT.scopePosition);
-+      appendScopeBegin(JT.block, VD, dyn_cast<Stmt>(TG));
-+      addSuccessor(B, JT.block);
-+    };
 +    if (auto *G = dyn_cast<GotoStmt>(B->getTerminator())) {
 +      LabelMapTy::iterator LI = LabelMap.find(G->getLabel());
 +      // If there is no target for the goto, then we are looking at an
 +      // incomplete AST.  Handle this by not registering a successor.
 +      if (LI == LabelMap.end())
 +        continue;
-+      BuildCFGForLabel(LI->second, B, B->getTerminator(), I);
-+    }
++      JumpTarget JT = LI->second;
++      prependAutomaticObjLifetimeWithTerminator(B, I->scopePosition,
++                                                JT.scopePosition);
++      prependAutomaticObjDtorsWithTerminator(B, I->scopePosition,
++                                             JT.scopePosition);
++      const VarDecl *VD = prependAutomaticObjScopeEndWithTerminator(
++          B, I->scopePosition, JT.scopePosition);
++      appendScopeBegin(JT.block, VD, G);
++      addSuccessor(B, JT.block);
++    };
 +    if (auto *G = dyn_cast<GCCAsmStmt>(B->getTerminator())) {
 +      CFGBlock *Successor  = (I+1)->block;
 +      for (auto *L : G->labels()) {
 +        LabelMapTy::iterator LI = LabelMap.find(L->getLabel());
++        // If there is no target for the goto, then we are looking at an
++        // incomplete AST.  Handle this by not registering a successor.
 +        if (LI == LabelMap.end())
 +          continue;
 +        JumpTarget JT = LI->second;
 +        // Successor has been added, so skip it.
 +        if (JT.block == Successor)
 +          continue;
-+        BuildCFGForLabel(JT, B, B->getTerminator(), I);
++        addSuccessor(B, JT.block);
 +      }
 +      I++;
 +    }
    }
--
+ 
    // Add successors to the Indirect Goto Dispatch block (if we have one).
-   if (CFGBlock *B = cfg->getIndirectGotoBlock())
-     for (LabelSetTy::iterator I = AddressTakenLabels.begin(),
-@@ -2099,6 +2117,9 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc) {
+@@ -2099,6 +2116,9 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc) {
      case Stmt::GotoStmtClass:
        return VisitGotoStmt(cast<GotoStmt>(S));
  
@@ -435,7 +400,7 @@ index f6b82914..afb4d4fb 100644
      case Stmt::IfStmtClass:
        return VisitIfStmt(cast<IfStmt>(S));
  
-@@ -3103,6 +3124,42 @@ CFGBlock *CFGBuilder::VisitGotoStmt(GotoStmt *G) {
+@@ -3103,6 +3123,28 @@ CFGBlock *CFGBuilder::VisitGotoStmt(GotoStmt *G) {
    return Block;
  }
  
@@ -453,25 +418,11 @@ index f6b82914..afb4d4fb 100644
 +  }
 +  Block = createBlock();
 +  Block->setTerminator(G);
-+  for (auto *E : G->labels()) {
-+    LabelMapTy::iterator I = LabelMap.find(E->getLabel());
-+    if (I == LabelMap.end()) {
-+      // We will need to backpatch this block later.
-+      BackpatchBlocks.push_back(JumpSource(Block, ScopePos));
-+      // Save "Succ" in BackpatchBlocks. In the backpatch processing, "Succ" is
-+      // used to avoid adding "Succ" again.
-+      BackpatchBlocks.push_back(JumpSource(Succ, ScopePos));
-+      return Block;
-+    }
-+  }
-+  for (auto *E : G->labels()) {
-+    LabelMapTy::iterator I = LabelMap.find(E->getLabel());
-+    JumpTarget JT = I->second;
-+    addAutomaticObjHandling(ScopePos, JT.scopePosition, G);
-+    if (JT.block == Succ)
-+      continue;
-+    addSuccessor(Block, JT.block);
-+  }
++  // We will backpatch this block later for all the labels.
++  BackpatchBlocks.push_back(JumpSource(Block, ScopePos));
++  // Save "Succ" in BackpatchBlocks. In the backpatch processing, "Succ" is
++  // used to avoid adding "Succ" again.
++  BackpatchBlocks.push_back(JumpSource(Succ, ScopePos));
 +  return Block;
 +}
 +
@@ -479,10 +430,10 @@ index f6b82914..afb4d4fb 100644
    CFGBlock *LoopSuccessor = nullptr;
  
 diff --git a/lib/CodeGen/CGStmt.cpp b/lib/CodeGen/CGStmt.cpp
-index 5b5113b1..87834638 100644
+index b9905a2b..3c13648a 100644
 --- a/lib/CodeGen/CGStmt.cpp
 +++ b/lib/CodeGen/CGStmt.cpp
-@@ -1889,6 +1889,55 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
+@@ -1896,6 +1896,55 @@ static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
    return llvm::MDNode::get(CGF.getLLVMContext(), Locs);
  }
  
@@ -538,7 +489,7 @@ index 5b5113b1..87834638 100644
  void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
    // Assemble the final asm string.
    std::string AsmString = S.generateAsmString(getContext());
-@@ -2125,6 +2174,29 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
+@@ -2132,6 +2181,29 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
    }
    Constraints += InOutConstraints;
  
@@ -568,7 +519,7 @@ index 5b5113b1..87834638 100644
    // Clobbers
    for (unsigned i = 0, e = S.getNumClobbers(); i != e; i++) {
      StringRef Clobber = S.getClobber(i);
-@@ -2167,52 +2239,18 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
+@@ -2174,52 +2246,18 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
    llvm::InlineAsm *IA =
      llvm::InlineAsm::get(FTy, AsmString, Constraints, HasSideEffect,
                           /* IsAlignStack */ false, AsmDialect);
@@ -748,26 +699,27 @@ index 3c4bc073..7392c862 100644
  
  /// ParseAsmOperands - Parse the asm-operands production as used by
 diff --git a/lib/Sema/JumpDiagnostics.cpp b/lib/Sema/JumpDiagnostics.cpp
-index 2234d6ba..74fbdeeb 100644
+index 2234d6ba..c8743df9 100644
 --- a/lib/Sema/JumpDiagnostics.cpp
 +++ b/lib/Sema/JumpDiagnostics.cpp
-@@ -65,8 +65,8 @@ class JumpScopeChecker {
+@@ -65,8 +65,10 @@ class JumpScopeChecker {
    llvm::DenseMap<Stmt*, unsigned> LabelAndGotoScopes;
    SmallVector<Stmt*, 16> Jumps;
  
 -  SmallVector<IndirectGotoStmt*, 4> IndirectJumps;
--  SmallVector<LabelDecl*, 4> IndirectJumpTargets;
-+  SmallVector<Stmt*, 4> IndirectOrAsmJumps;
-+  SmallVector<LabelDecl*, 4> IndirectOrAsmJumpTargets;
++  SmallVector<Stmt*, 4> IndirectJumps;
++  SmallVector<Stmt*, 4> AsmJumps;
+   SmallVector<LabelDecl*, 4> IndirectJumpTargets;
++  SmallVector<LabelDecl*, 4> AsmJumpTargets;
  public:
    JumpScopeChecker(Stmt *Body, Sema &S);
  private:
-@@ -76,10 +76,10 @@ private:
+@@ -76,10 +78,10 @@ private:
    void BuildScopeInformation(Stmt *S, unsigned &origParentScope);
  
    void VerifyJumps();
 -  void VerifyIndirectJumps();
-+  void VerifyIndirectOrAsmJumps();
++  void VerifyIndirectOrAsmJumps(bool IsAsmGoto);
    void NoteJumpIntoScopes(ArrayRef<unsigned> ToScopes);
 -  void DiagnoseIndirectJump(IndirectGotoStmt *IG, unsigned IGScope,
 -                            LabelDecl *Target, unsigned TargetScope);
@@ -776,34 +728,26 @@ index 2234d6ba..74fbdeeb 100644
    void CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
                   unsigned JumpDiag, unsigned JumpDiagWarning,
                   unsigned JumpDiagCXX98Compat);
-@@ -103,7 +103,7 @@ JumpScopeChecker::JumpScopeChecker(Stmt *Body, Sema &s)
+@@ -103,7 +105,8 @@ JumpScopeChecker::JumpScopeChecker(Stmt *Body, Sema &s)
  
    // Check that all jumps we saw are kosher.
    VerifyJumps();
 -  VerifyIndirectJumps();
-+  VerifyIndirectOrAsmJumps();
++  VerifyIndirectOrAsmJumps(false);
++  VerifyIndirectOrAsmJumps(true);
  }
  
  /// GetDeepestCommonScope - Finds the innermost scope enclosing the
-@@ -291,7 +291,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
-   // If we found a label, remember that it is in ParentScope scope.
-   switch (S->getStmtClass()) {
-   case Stmt::AddrLabelExprClass:
--    IndirectJumpTargets.push_back(cast<AddrLabelExpr>(S)->getLabel());
-+    IndirectOrAsmJumpTargets.push_back(cast<AddrLabelExpr>(S)->getLabel());
-     break;
- 
-   case Stmt::ObjCForCollectionStmtClass: {
-@@ -316,7 +316,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
+@@ -316,7 +319,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
      }
  
      LabelAndGotoScopes[S] = ParentScope;
 -    IndirectJumps.push_back(cast<IndirectGotoStmt>(S));
-+    IndirectOrAsmJumps.push_back(S);
++    IndirectJumps.push_back(S);
      break;
  
    case Stmt::SwitchStmtClass:
-@@ -339,6 +339,18 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
+@@ -339,6 +342,18 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
      Jumps.push_back(S);
      break;
  
@@ -813,16 +757,16 @@ index 2234d6ba..74fbdeeb 100644
 +        // Remember both what scope a goto is in as well as the fact that we
 +        // have it.  This makes the second scan not have to walk the AST again.
 +        LabelAndGotoScopes[S] = ParentScope;
-+        IndirectOrAsmJumps.push_back(GS);
++        AsmJumps.push_back(GS);
 +        for (auto *E : GS->labels())
-+          IndirectOrAsmJumpTargets.push_back(E->getLabel());
++          AsmJumpTargets.push_back(E->getLabel());
 +      }
 +    break;
 +
    case Stmt::IfStmtClass: {
      IfStmt *IS = cast<IfStmt>(S);
      if (!(IS->isConstexpr() || IS->isObjCAvailabilityCheck()))
-@@ -629,14 +641,13 @@ void JumpScopeChecker::VerifyJumps() {
+@@ -629,14 +644,13 @@ void JumpScopeChecker::VerifyJumps() {
    }
  }
  
@@ -844,30 +788,33 @@ index 2234d6ba..74fbdeeb 100644
  /// from A to B is trivial if the path out from A to DCA(A,B) is
  /// trivial and the path in from DCA(A,B) to B is trivial, where
  /// DCA(A,B) is the deepest common ancestor of A and B.
-@@ -648,36 +659,53 @@ void JumpScopeChecker::VerifyJumps() {
+@@ -648,36 +662,41 @@ void JumpScopeChecker::VerifyJumps() {
  /// Under these definitions, this function checks that the indirect
  /// jump between A and B is trivial for every indirect goto statement A
  /// and every label B whose address was taken in the function.
 -void JumpScopeChecker::VerifyIndirectJumps() {
 -  if (IndirectJumps.empty()) return;
-+void JumpScopeChecker::VerifyIndirectOrAsmJumps() {
-+  if (IndirectOrAsmJumps.empty()) return;
- 
+-
++void JumpScopeChecker::VerifyIndirectOrAsmJumps(bool IsAsmGoto) {
++  SmallVector<Stmt*, 4> GotoJumps = IsAsmGoto ? AsmJumps : IndirectJumps;
++  if (GotoJumps.empty())
++    return;
++  SmallVector<LabelDecl *, 4> JumpTargets =
++      IsAsmGoto ? AsmJumpTargets : IndirectJumpTargets;
    // If there aren't any address-of-label expressions in this function,
    // complain about the first indirect goto.
 -  if (IndirectJumpTargets.empty()) {
 -    S.Diag(IndirectJumps[0]->getGotoLoc(),
--           diag::err_indirect_goto_without_addrlabel);
-+  if (IndirectOrAsmJumpTargets.empty()) {
-+    bool IsAsmGoto =  dyn_cast<GCCAsmStmt>(IndirectOrAsmJumps[0]) != nullptr;
-+    S.Diag(IndirectOrAsmJumps[0]->getBeginLoc(),
-+           diag::err_indirect_goto_without_addrlabel)
-+        << IsAsmGoto << IsAsmGoto;
++  if (JumpTargets.empty()) {
++    assert(!IsAsmGoto &&"only indirect goto can get here");
++    S.Diag(GotoJumps[0]->getBeginLoc(),
+            diag::err_indirect_goto_without_addrlabel);
      return;
    }
- 
+-
    // Collect a single representative of every scope containing an
-   // indirect goto.  For most code bases, this substantially cuts
+-  // indirect goto.  For most code bases, this substantially cuts
++  // indirect or asm goto.  For most code bases, this substantially cuts
    // down on the number of jump sites we'll have to consider later.
 -  typedef std::pair<unsigned, IndirectGotoStmt*> JumpScope;
 +  typedef std::pair<unsigned, Stmt*> JumpScope;
@@ -877,55 +824,39 @@ index 2234d6ba..74fbdeeb 100644
 -    for (SmallVectorImpl<IndirectGotoStmt*>::iterator
 -           I = IndirectJumps.begin(), E = IndirectJumps.end(); I != E; ++I) {
 -      IndirectGotoStmt *IG = *I;
-+    llvm::DenseMap<unsigned, Stmt*> IndirectJumpScopesMap;
-+    llvm::DenseMap<unsigned, Stmt*> AsmJumpScopesMap;
-+    for (SmallVectorImpl<Stmt *>::iterator I = IndirectOrAsmJumps.begin(),
-+                                           E = IndirectOrAsmJumps.end();
++    llvm::DenseMap<unsigned, Stmt*> JumpScopesMap;
++    for (SmallVectorImpl<Stmt *>::iterator I = GotoJumps.begin(),
++                                           E = GotoJumps.end();
 +         I != E; ++I) {
 +      Stmt *IG = *I;
        if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(IG)))
          continue;
        unsigned IGScope = LabelAndGotoScopes[IG];
 -      IndirectGotoStmt *&Entry = JumpScopesMap[IGScope];
--      if (!Entry) Entry = IG;
-+      if  (dyn_cast<IndirectGotoStmt>(IG)) {
-+        Stmt *&Entry = IndirectJumpScopesMap[IGScope];
-+        if (!Entry) Entry = IG;
-+      } else {
-+        Stmt *&Entry = AsmJumpScopesMap[IGScope];
-+        if (!Entry) Entry = IG;
-+      }
++      Stmt *&Entry = JumpScopesMap[IGScope];
+       if (!Entry) Entry = IG;
      }
--    JumpScopes.reserve(JumpScopesMap.size());
+     JumpScopes.reserve(JumpScopesMap.size());
 -    for (llvm::DenseMap<unsigned, IndirectGotoStmt*>::iterator
 -           I = JumpScopesMap.begin(), E = JumpScopesMap.end(); I != E; ++I)
-+    JumpScopes.reserve(IndirectJumpScopesMap.size());
-+    for (llvm::DenseMap<unsigned, Stmt *>::iterator
-+             I = IndirectJumpScopesMap.begin(),
-+             E = IndirectJumpScopesMap.end();
-+         I != E; ++I)
-+      JumpScopes.push_back(*I);
-+    JumpScopes.reserve(AsmJumpScopesMap.size());
-+    for (llvm::DenseMap<unsigned, Stmt *>::iterator
-+             I = AsmJumpScopesMap.begin(),
-+             E = AsmJumpScopesMap.end();
++    for (llvm::DenseMap<unsigned, Stmt *>::iterator I = JumpScopesMap.begin(),
++                                                    E = JumpScopesMap.end();
 +         I != E; ++I)
        JumpScopes.push_back(*I);
    }
  
-@@ -685,8 +713,9 @@ void JumpScopeChecker::VerifyIndirectJumps() {
+@@ -685,8 +704,8 @@ void JumpScopeChecker::VerifyIndirectJumps() {
    // label whose address was taken somewhere in the function.
    // For most code bases, there will be only one such scope.
    llvm::DenseMap<unsigned, LabelDecl*> TargetScopes;
 -  for (SmallVectorImpl<LabelDecl*>::iterator
 -         I = IndirectJumpTargets.begin(), E = IndirectJumpTargets.end();
-+  for (SmallVectorImpl<LabelDecl *>::iterator
-+           I = IndirectOrAsmJumpTargets.begin(),
-+           E = IndirectOrAsmJumpTargets.end();
++  for (SmallVectorImpl<LabelDecl *>::iterator I = JumpTargets.begin(),
++                                              E = JumpTargets.end();
         I != E; ++I) {
      LabelDecl *TheLabel = *I;
      if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(TheLabel->getStmt())))
-@@ -763,7 +792,7 @@ void JumpScopeChecker::VerifyIndirectJumps() {
+@@ -763,7 +782,7 @@ void JumpScopeChecker::VerifyIndirectJumps() {
        // Only diagnose if we didn't find something.
        if (IsReachable) continue;
  
@@ -934,7 +865,7 @@ index 2234d6ba..74fbdeeb 100644
      }
    }
  }
-@@ -784,12 +813,15 @@ static bool IsCXX98CompatWarning(Sema &S, unsigned InDiagNote) {
+@@ -784,12 +803,15 @@ static bool IsCXX98CompatWarning(Sema &S, unsigned InDiagNote) {
  }
  
  /// Produce primary diagnostic for an indirect jump statement.
@@ -946,7 +877,7 @@ index 2234d6ba..74fbdeeb 100644
      return;
 -  S.Diag(Jump->getGotoLoc(), diag::err_indirect_goto_in_protected_scope);
 -  S.Diag(Target->getStmt()->getIdentLoc(), diag::note_indirect_goto_target);
-+  bool IsAsmGoto = dyn_cast<GCCAsmStmt>(Jump) != nullptr;
++  bool IsAsmGoto = isa<GCCAsmStmt>(Jump);
 +  S.Diag(Jump->getBeginLoc(), diag::err_indirect_goto_in_protected_scope)
 +      << IsAsmGoto;
 +  S.Diag(Target->getStmt()->getIdentLoc(), diag::note_indirect_goto_target)
@@ -954,7 +885,7 @@ index 2234d6ba..74fbdeeb 100644
    Diagnosed = true;
  }
  
-@@ -803,10 +835,9 @@ void JumpScopeChecker::NoteJumpIntoScopes(ArrayRef<unsigned> ToScopes) {
+@@ -803,10 +825,9 @@ void JumpScopeChecker::NoteJumpIntoScopes(ArrayRef<unsigned> ToScopes) {
  }
  
  /// Diagnose an indirect jump which is known to cross scopes.
@@ -968,7 +899,7 @@ index 2234d6ba..74fbdeeb 100644
    if (CHECK_PERMISSIVE(JumpScope == TargetScope))
      return;
  
-@@ -816,7 +847,7 @@ void JumpScopeChecker::DiagnoseIndirectJump(IndirectGotoStmt *Jump,
+@@ -816,7 +837,7 @@ void JumpScopeChecker::DiagnoseIndirectJump(IndirectGotoStmt *Jump,
    // Walk out the scope chain until we reach the common ancestor.
    for (unsigned I = JumpScope; I != Common; I = Scopes[I].ParentScope)
      if (Scopes[I].OutDiag) {
@@ -977,7 +908,7 @@ index 2234d6ba..74fbdeeb 100644
        S.Diag(Scopes[I].Loc, Scopes[I].OutDiag);
      }
  
-@@ -827,15 +858,18 @@ void JumpScopeChecker::DiagnoseIndirectJump(IndirectGotoStmt *Jump,
+@@ -827,15 +848,18 @@ void JumpScopeChecker::DiagnoseIndirectJump(IndirectGotoStmt *Jump,
      if (IsCXX98CompatWarning(S, Scopes[I].InDiag))
        ToScopesCXX98Compat.push_back(I);
      else if (Scopes[I].InDiag) {
@@ -991,7 +922,7 @@ index 2234d6ba..74fbdeeb 100644
 -    S.Diag(Jump->getGotoLoc(),
 -           diag::warn_cxx98_compat_indirect_goto_in_protected_scope);
 -    S.Diag(Target->getStmt()->getIdentLoc(), diag::note_indirect_goto_target);
-+    bool IsAsmGoto = dyn_cast<GCCAsmStmt>(Jump) != nullptr;
++    bool IsAsmGoto = isa<GCCAsmStmt>(Jump);
 +    S.Diag(Jump->getBeginLoc(),
 +           diag::warn_cxx98_compat_indirect_goto_in_protected_scope)
 +        << IsAsmGoto;
@@ -1000,91 +931,8 @@ index 2234d6ba..74fbdeeb 100644
      NoteJumpIntoScopes(ToScopesCXX98Compat);
    }
  }
-diff --git a/lib/Sema/Sema.cpp b/lib/Sema/Sema.cpp
-index da87e156..bb1e2642 100644
---- a/lib/Sema/Sema.cpp
-+++ b/lib/Sema/Sema.cpp
-@@ -1402,23 +1402,11 @@ Sema::DeviceDiagBuilder::DeviceDiagBuilder(Kind K, SourceLocation Loc,
-     break;
-   case K_Deferred:
-     assert(Fn && "Must have a function to attach the deferred diag to.");
--    auto &Diags = S.DeviceDeferredDiags[Fn];
--    PartialDiagId.emplace(Diags.size());
--    Diags.emplace_back(Loc, S.PDiag(DiagID));
-+    PartialDiag.emplace(S.PDiag(DiagID));
-     break;
-   }
- }
- 
--Sema::DeviceDiagBuilder::DeviceDiagBuilder(DeviceDiagBuilder &&D)
--    : S(D.S), Loc(D.Loc), DiagID(D.DiagID), Fn(D.Fn),
--      ShowCallStack(D.ShowCallStack), ImmediateDiag(D.ImmediateDiag),
--      PartialDiagId(D.PartialDiagId) {
--  // Clean the previous diagnostics.
--  D.ShowCallStack = false;
--  D.ImmediateDiag.reset();
--  D.PartialDiagId.reset();
--}
--
- Sema::DeviceDiagBuilder::~DeviceDiagBuilder() {
-   if (ImmediateDiag) {
-     // Emit our diagnostic and, if it was a warning or error, output a callstack
-@@ -1428,9 +1416,9 @@ Sema::DeviceDiagBuilder::~DeviceDiagBuilder() {
-     ImmediateDiag.reset(); // Emit the immediate diag.
-     if (IsWarningOrError && ShowCallStack)
-       emitCallStackNotes(S, Fn);
--  } else {
--    assert((!PartialDiagId || ShowCallStack) &&
--           "Must always show call stack for deferred diags.");
-+  } else if (PartialDiag) {
-+    assert(ShowCallStack && "Must always show call stack for deferred diags.");
-+    S.DeviceDeferredDiags[Fn].push_back({Loc, std::move(*PartialDiag)});
-   }
- }
- 
-@@ -1499,12 +1487,10 @@ void Sema::markKnownEmitted(
-   }
- }
- 
--Sema::DeviceDiagBuilder Sema::targetDiag(SourceLocation Loc, unsigned DiagID) {
-+Sema::DeviceDiagBuilder Sema::targetDiag(SourceLocation Loc,
-+                                         unsigned DiagID) {
-   if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)
-     return diagIfOpenMPDeviceCode(Loc, DiagID);
--  if (getLangOpts().CUDA)
--    return getLangOpts().CUDAIsDevice ? CUDADiagIfDeviceCode(Loc, DiagID)
--                                      : CUDADiagIfHostCode(Loc, DiagID);
-   return DeviceDiagBuilder(DeviceDiagBuilder::K_Immediate, Loc, DiagID,
-                            getCurFunctionDecl(), *this);
- }
-diff --git a/lib/Sema/SemaExprCXX.cpp b/lib/Sema/SemaExprCXX.cpp
-index 512e256d..fe1676ab 100644
---- a/lib/Sema/SemaExprCXX.cpp
-+++ b/lib/Sema/SemaExprCXX.cpp
-@@ -750,7 +750,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
-                                bool IsThrownVarInScope) {
-   // Don't report an error if 'throw' is used in system headers.
-   if (!getLangOpts().CXXExceptions &&
--      !getSourceManager().isInSystemHeader(OpLoc) && !getLangOpts().CUDA) {
-+      !getSourceManager().isInSystemHeader(OpLoc)) {
-     // Delay error emission for the OpenMP device code.
-     targetDiag(OpLoc, diag::err_exceptions_disabled) << "throw";
-   }
-diff --git a/lib/Sema/SemaStmt.cpp b/lib/Sema/SemaStmt.cpp
-index 07af218b..fb5c2dac 100644
---- a/lib/Sema/SemaStmt.cpp
-+++ b/lib/Sema/SemaStmt.cpp
-@@ -3993,7 +3993,7 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
-                                   ArrayRef<Stmt *> Handlers) {
-   // Don't report an error if 'try' is used in system headers.
-   if (!getLangOpts().CXXExceptions &&
--      !getSourceManager().isInSystemHeader(TryLoc) && !getLangOpts().CUDA) {
-+      !getSourceManager().isInSystemHeader(TryLoc)) {
-     // Delay error emission for the OpenMP device code.
-     targetDiag(TryLoc, diag::err_exceptions_disabled) << "try";
-   }
 diff --git a/lib/Sema/SemaStmtAsm.cpp b/lib/Sema/SemaStmtAsm.cpp
-index e1ea3b66..47ca65c8 100644
+index 8c601257..9a0372b8 100644
 --- a/lib/Sema/SemaStmtAsm.cpp
 +++ b/lib/Sema/SemaStmtAsm.cpp
 @@ -209,11 +209,12 @@ static StringRef extractRegisterName(const Expr *Expression,
@@ -1109,24 +957,42 @@ index e1ea3b66..47ca65c8 100644
                                   SourceLocation RParenLoc) {
    unsigned NumClobbers = clobbers.size();
    StringLiteral **Constraints =
-@@ -253,6 +255,16 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
-   // The parser verifies that there is a string literal here.
-   assert(AsmString->isAscii());
+@@ -269,7 +271,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
+       return new (Context)
+           GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
+                      NumInputs, Names, Constraints, Exprs.data(), AsmString,
+-                     NumClobbers, Clobbers, RParenLoc);
++                     NumClobbers, Clobbers, NumLabels, RParenLoc);
+     }
  
-+  // If we're compiling CUDA file and function attributes indicate that it's not
-+  // for this compilation side, skip all the checks.
-+  if (!DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl())) {
-+    GCCAsmStmt *NS = new (Context) GCCAsmStmt(
-+        Context, AsmLoc, IsSimple, IsVolatile, NumOutputs, NumInputs, Names,
-+        Constraints, Exprs.data(), AsmString, NumClobbers, Clobbers,
-+        NumLabels, RParenLoc);
-+    return NS;
-+  }
-+
-   for (unsigned i = 0; i != NumOutputs; i++) {
-     StringLiteral *Literal = Constraints[i];
-     assert(Literal->isAscii());
-@@ -432,7 +444,8 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
+     ExprResult ER = CheckPlaceholderExpr(Exprs[i]);
+@@ -330,7 +332,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
+       return new (Context)
+           GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
+                      NumInputs, Names, Constraints, Exprs.data(), AsmString,
+-                     NumClobbers, Clobbers, RParenLoc);
++                     NumClobbers, Clobbers, NumLabels, RParenLoc);
+     }
+   }
+ 
+@@ -352,7 +354,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
+       return new (Context)
+           GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
+                      NumInputs, Names, Constraints, Exprs.data(), AsmString,
+-                     NumClobbers, Clobbers, RParenLoc);
++                     NumClobbers, Clobbers, NumLabels, RParenLoc);
+     }
+ 
+     ExprResult ER = CheckPlaceholderExpr(Exprs[i]);
+@@ -451,14 +453,15 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
+       return new (Context)
+           GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
+                      NumInputs, Names, Constraints, Exprs.data(), AsmString,
+-                     NumClobbers, Clobbers, RParenLoc);
++                     NumClobbers, Clobbers, NumLabels, RParenLoc);
+     }
+   }
+ 
    GCCAsmStmt *NS =
      new (Context) GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
                               NumInputs, Names, Constraints, Exprs.data(),
@@ -1136,7 +1002,7 @@ index e1ea3b66..47ca65c8 100644
    // Validate the asm string, ensuring it makes sense given the operands we
    // have.
    SmallVector<GCCAsmStmt::AsmStringPiece, 8> Pieces;
-@@ -449,8 +462,10 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
+@@ -476,8 +479,10 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
  
      // Look for the correct constraint index.
      unsigned ConstraintIdx = Piece.getOperandNo();
@@ -1148,34 +1014,34 @@ index e1ea3b66..47ca65c8 100644
      // Look for the (ConstraintIdx - NumOperands + 1)th constraint with
      // modifier '+'.
      if (ConstraintIdx >= NumOperands) {
-@@ -632,11 +647,39 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
+@@ -660,10 +665,39 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
    // Check for conflicts between clobber list and input or output lists
    SourceLocation ConstraintLoc =
        getClobberConflictLocation(Exprs, Constraints, Clobbers, NumClobbers,
 +                                 NumLabels,
                                   Context.getTargetInfo(), Context);
    if (ConstraintLoc.isValid())
-     return StmtResult(
-         targetDiag(ConstraintLoc, diag::error_inoutput_conflict_with_clobber));
+     targetDiag(ConstraintLoc, diag::error_inoutput_conflict_with_clobber);
  
 +  // Check for duplicate asm operand name between input, output and label lists.
-+  typedef std::pair<StringRef , Expr *> MyItemType;
-+  SmallVector<MyItemType, 4> MyList;
++  typedef std::pair<StringRef , Expr *> NamedOperand;
++  SmallVector<NamedOperand, 4> NamedOperandList;
 +  for (unsigned i = 0, e = NumOutputs + NumInputs + NumLabels; i != e; ++i)
 +    if (Names[i])
-+      MyList.emplace_back(std::make_pair(Names[i]->getName(), Exprs[i]));
-+  // Sort MyList.
-+  stable_sort(MyList.begin(), MyList.end(),
-+              [](const MyItemType &LHS, const MyItemType &RHS) {
++      NamedOperandList.emplace_back(
++          std::make_pair(Names[i]->getName(), Exprs[i]));
++  // Sort NamedOperandList.
++  stable_sort(NamedOperandList.begin(), NamedOperandList.end(),
++              [](const NamedOperand &LHS, const NamedOperand &RHS) {
 +                return LHS.first < RHS.first;
 +              });
 +  // Find adjacent duplicate operand.
-+  SmallVector<MyItemType, 4>::iterator Found =
-+      std::adjacent_find(begin(MyList), end(MyList),
-+                         [](const MyItemType &LHS, const MyItemType &RHS) {
++  SmallVector<NamedOperand, 4>::iterator Found =
++      std::adjacent_find(begin(NamedOperandList), end(NamedOperandList),
++                         [](const NamedOperand &LHS, const NamedOperand &RHS) {
 +                           return LHS.first == RHS.first;
 +                         });
-+  if (Found != MyList.end()) {
++  if (Found != NamedOperandList.end()) {
 +    Diag((Found + 1)->second->getBeginLoc(),
 +         diag::error_duplicate_asm_operand_name)
 +        << (Found + 1)->first;
@@ -1188,38 +1054,11 @@ index e1ea3b66..47ca65c8 100644
    return NS;
  }
  
-diff --git a/lib/Sema/SemaType.cpp b/lib/Sema/SemaType.cpp
-index f314cb0a..090d9431 100644
---- a/lib/Sema/SemaType.cpp
-+++ b/lib/Sema/SemaType.cpp
-@@ -2250,13 +2250,15 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
-   }
- 
-   if (T->isVariableArrayType() && !Context.getTargetInfo().isVLASupported()) {
--    // CUDA device code and some other targets don't support VLAs.
--    targetDiag(Loc, (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
--                        ? diag::err_cuda_vla
--                        : diag::err_vla_unsupported)
--        << ((getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
--                ? CurrentCUDATarget()
--                : CFT_InvalidTarget);
-+    if (getLangOpts().CUDA) {
-+      // CUDA device code doesn't support VLAs.
-+      CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget();
-+    } else if (!getLangOpts().OpenMP ||
-+               shouldDiagnoseTargetSupportFromOpenMP()) {
-+      // Some targets don't support VLAs.
-+      Diag(Loc, diag::err_vla_unsupported);
-+      return QualType();
-+    }
-   }
- 
-   // If this is not C99, extwarn about VLA's and C99 array size modifiers.
 diff --git a/lib/Sema/TreeTransform.h b/lib/Sema/TreeTransform.h
-index 386b23db..45123b6b 100644
+index 605d5233..d300d729 100644
 --- a/lib/Sema/TreeTransform.h
 +++ b/lib/Sema/TreeTransform.h
-@@ -1366,10 +1366,11 @@ public:
+@@ -1365,10 +1365,11 @@ public:
                                 unsigned NumInputs, IdentifierInfo **Names,
                                 MultiExprArg Constraints, MultiExprArg Exprs,
                                 Expr *AsmString, MultiExprArg Clobbers,
@@ -1232,7 +1071,7 @@ index 386b23db..45123b6b 100644
    }
  
    /// Build a new MS style inline asm statement.
-@@ -6988,6 +6989,16 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
+@@ -6986,6 +6987,16 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
      Exprs.push_back(Result.get());
    }
  
@@ -1249,7 +1088,7 @@ index 386b23db..45123b6b 100644
    if (!getDerived().AlwaysRebuild() && !ExprsChanged)
      return S;
  
-@@ -7001,7 +7012,8 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
+@@ -6999,7 +7010,8 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
                                          S->isVolatile(), S->getNumOutputs(),
                                          S->getNumInputs(), Names.data(),
                                          Constraints, Exprs, AsmString.get(),
@@ -1457,29 +1296,6 @@ index 35668790..ea3b96f6 100644
    return;
  }
  
-diff --git a/test/OpenMP/target_vla_messages.cpp b/test/OpenMP/target_vla_messages.cpp
-index 30a27517..b744081e 100644
---- a/test/OpenMP/target_vla_messages.cpp
-+++ b/test/OpenMP/target_vla_messages.cpp
-@@ -47,7 +47,7 @@ void target_template(int arg) {
- #pragma omp target
-   {
- #ifdef NO_VLA
--    // expected-error@+2 2 {{variable length arrays are not supported for the current target}}
-+    // expected-error@+2 {{variable length arrays are not supported for the current target}}
- #endif
-     T vla[arg];
-   }
-@@ -73,9 +73,6 @@ void target(int arg) {
-     }
-   }
- 
--#ifdef NO_VLA
--    // expected-note@+2 {{in instantiation of function template specialization 'target_template<long>' requested here}}
--#endif
-   target_template<long>(arg);
- }
- 
 diff --git a/test/PCH/asm.h b/test/PCH/asm.h
 index a568058d..5a7268ef 100644
 --- a/test/PCH/asm.h
@@ -1501,7 +1317,7 @@ index a568058d..5a7268ef 100644
  
  void clobbers() {
 diff --git a/test/Parser/asm.c b/test/Parser/asm.c
-index dabb0105..c2c56efa 100644
+index dabb0105..0ad8ee3b 100644
 --- a/test/Parser/asm.c
 +++ b/test/Parser/asm.c
 @@ -17,6 +17,56 @@ void f2() {
@@ -1549,7 +1365,7 @@ index dabb0105..c2c56efa 100644
 +  // expected-error@+1 {{use of undeclared label 'b'}}
 +  asm goto ("decl %0;" :: "m"(x) : "memory" :b);
 +  // expected-error@+1 {{invalid operand number in inline asm string}}
-+  asm goto ("testl %0, %0; jne %l3;" :: "r"(cond)::label_true, loop)
++  asm goto ("testl %0, %0; jne %l3;" :: "r"(cond)::label_true, loop);
 +  // expected-error@+1 {{unknown symbolic operand name in inline assembly string}}
 +  asm goto ("decl %0; jnz %l[b]" :: "m"(x) : "memory" : a);
 +a:
@@ -1562,7 +1378,7 @@ index dabb0105..c2c56efa 100644
  __asm ; // expected-error {{expected '(' after 'asm'}}
  
 diff --git a/test/Parser/asm.cpp b/test/Parser/asm.cpp
-index 9f64dfea..bf525764 100644
+index 9f64dfea..9c4d62a2 100644
 --- a/test/Parser/asm.cpp
 +++ b/test/Parser/asm.cpp
 @@ -7,3 +7,54 @@ int foo4 asm (u"bar4"); // expected-error {{cannot use unicode string literal in
@@ -1586,7 +1402,7 @@ index 9f64dfea..bf525764 100644
 +  // expected-error@+1 {{use of undeclared label 'b'}}
 +  asm goto ("decl %0;" :: "m"(x) : "memory" :b);
 +  // expected-error@+1 {{invalid operand number in inline asm string}}
-+  asm goto ("testl %0, %0; jne %l3;" :: "r"(cond)::label_true, loop)
++  asm goto ("testl %0, %0; jne %l3;" :: "r"(cond)::label_true, loop);
 +  // expected-error@+1 {{unknown symbolic operand name in inline assembly string}}
 +  asm goto ("decl %0; jnz %l[b]" :: "m"(x) : "memory" : a);
 +label_true:
@@ -1672,7 +1488,7 @@ index 00000000..f61a8096
 +  return;
 +}
 diff --git a/test/Sema/asm.c b/test/Sema/asm.c
-index 04b7cb19..edec916a 100644
+index 67da1974..29a55c61 100644
 --- a/test/Sema/asm.c
 +++ b/test/Sema/asm.c
 @@ -295,3 +295,24 @@ int test17(int t0)
@@ -1742,154 +1558,3 @@ index fa37d10d..0622450e 100644
 +loop:
 +  return 0;
 +}
-diff --git a/test/SemaCUDA/asm_delayed_diags.cu b/test/SemaCUDA/asm_delayed_diags.cu
-deleted file mode 100644
-index 20c5c448..00000000
---- a/test/SemaCUDA/asm_delayed_diags.cu
-+++ /dev/null
-@@ -1,118 +0,0 @@
--// RUN: %clang_cc1 -fsyntax-only -verify %s -DHOST -triple x86_64-unknown-linux-gnu
--// RUN: %clang_cc1 -fsyntax-only -verify %s -DHOST -DHOST_USED -triple x86_64-unknown-linux-gnu
--// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s -DDEVICE_NOT_USED -triple nvptx-unknown-cuda
--// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s -DDEVICE -triple nvptx-unknown-cuda
--// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s -DDEVICE -DDEVICE_USED -triple nvptx-unknown-cuda
--
--// REQUIRES: x86-registered-target
--// REQUIRES: nvptx-registered-target
--
--#if (defined(HOST) && !defined(HOST_USED)) || defined(DEVICE_NOT_USED)
--// expected-no-diagnostics
--#endif
--
--#include "Inputs/cuda.h"
--
--static __device__ __host__ void t1(int r) {
--  __asm__("PR3908 %[lf] %[xx] %[li] %[r]"
--          : [ r ] "+r"(r)
--          : [ lf ] "mx"(0), [ li ] "mr"(0), [ xx ] "x"((double)(0)));
--}
--
--static __device__ __host__ unsigned t2(signed char input) {
--  unsigned output;
--  __asm__("xyz"
--          : "=a"(output)
--          : "0"(input));
--  return output;
--}
--
--static __device__ __host__ double t3(double x) {
--  register long double result;
--  __asm __volatile("frndint"
--                   : "=t"(result)
--                   : "0"(x));
--  return result;
--}
--
--static __device__ __host__ unsigned char t4(unsigned char a, unsigned char b) {
--  unsigned int la = a;
--  unsigned int lb = b;
--  unsigned int bigres;
--  unsigned char res;
--  __asm__("0:\n1:\n"
--          : [ bigres ] "=la"(bigres)
--          : [ la ] "0"(la), [ lb ] "c"(lb)
--          : "edx", "cc");
--  res = bigres;
--  return res;
--}
--
--static __device__ __host__ void t5(void) {
--  __asm__ __volatile__(
--      "finit"
--      :
--      :
--      : "st", "st(1)", "st(2)", "st(3)",
--        "st(4)", "st(5)", "st(6)", "st(7)",
--        "fpsr", "fpcr");
--}
--
--typedef long long __m256i __attribute__((__vector_size__(32)));
--static __device__ __host__ void t6(__m256i *p) {
--  __asm__ volatile("vmovaps  %0, %%ymm0" ::"m"(*(__m256i *)p)
--                   : "ymm0");
--}
--
--static __device__ __host__ void t7(__m256i *p) {
--  __asm__ volatile("vmovaps  %0, %%ymm0" ::"m"(*(__m256i *)p)
--                   : "r0");
--}
--
--#ifdef DEVICE
--__device__ int m() {
--  t1(0);
--  t2(0);
--  t3(0);
--  t4(0, 0);
--  t5();
--  t6(0);
--#ifdef DEVICE_USED
--  t7(0);
--#endif // DEVICE_USED
--  return 0;
--}
--#endif // DEVICE
--
--#ifdef HOST
--__host__ int main() {
--  t1(0);
--  t2(0);
--  t3(0);
--  t4(0, 0);
--  t5();
--  t6(0);
--#ifdef HOST_USED
--  t7(0);
--#endif // HOST_USED
--  return 0;
--}
--#endif // HOST
--
--#if defined(HOST_USED)
--// expected-error@69 {{unknown register name 'r0' in asm}}
--// expected-note@96 {{called by 'main'}}
--#elif defined(DEVICE)
--// expected-error@19 {{invalid input constraint 'mx' in asm}}
--// expected-error@25 {{invalid output constraint '=a' in asm}}
--// expected-error@33 {{invalid output constraint '=t' in asm}}
--// expected-error@44 {{invalid output constraint '=la' in asm}}
--// expected-error@56 {{unknown register name 'st' in asm}}
--// expected-error@64 {{unknown register name 'ymm0' in asm}}
--// expected-note@74 {{called by 'm'}}
--// expected-note@75 {{called by 'm'}}
--// expected-note@76 {{called by 'm'}}
--// expected-note@77 {{called by 'm'}}
--// expected-note@78 {{called by 'm'}}
--// expected-note@79 {{called by 'm'}}
--#endif
-diff --git a/test/SemaCUDA/vla.cu b/test/SemaCUDA/vla.cu
-index cf3054cd..b65ae5e5 100644
---- a/test/SemaCUDA/vla.cu
-+++ b/test/SemaCUDA/vla.cu
-@@ -1,9 +1,5 @@
- // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -verify %s
--// RUN: %clang_cc1 -triple x86_64-unknown-linux -verify -DHOST %s
--
--#ifndef __CUDA_ARCH__
--// expected-no-diagnostics
--#endif
-+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -verify -DHOST %s
- 
- #include "Inputs/cuda.h"
- 
-@@ -12,10 +8,7 @@ void host(int n) {
- }
- 
- __device__ void device(int n) {
--  int x[n];
--#ifdef __CUDA_ARCH__
--  // expected-error@-2 {{cannot use variable-length arrays in __device__ functions}}
--#endif
-+  int x[n];  // expected-error {{cannot use variable-length arrays in __device__ functions}}
- }
- 
- __host__ __device__ void hd(int n) {
