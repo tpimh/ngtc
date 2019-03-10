@@ -1,3 +1,7 @@
+# temp directories
+root/src
+root/build
+
 # Compiled Object files
 *.slo
 *.lo
