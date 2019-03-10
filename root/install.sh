@@ -4,38 +4,39 @@ TOOLS='clang lld'
 PROJECTS='libunwind compiler-rt libcxx libcxxabi'
 ARCH="$(uname -m)"
 TARGETS='X86'
+ROOT=$(dirname $(readlink -f "$0"))
 
 PATH=/"$ARCH"-pc-linux-musl/bin:"$PATH"
 LD_LIBRARY_PATH=/"$ARCH"-pc-linux-musl/lib
 
-if [ ! -d /src ]; then
+if [ ! -d $ROOT/src ]; then
   echo no sources found, run sync
   exit 1
 fi
 
-if [ ! -d /build ]; then
-  mkdir /build || $(echo 'failed to create directory' && exit 1)
+if [ ! -d $ROOT/build ]; then
+  mkdir $ROOT/build || $(echo 'failed to create directory' && exit 1)
 fi
 
-cd /build || $(echo 'failed to change directory' && exit 1)
+cd $ROOT/build || $(echo 'failed to change directory' && exit 1)
 
 for TOOL in $TOOLS; do
-  if [ ! -e /src/llvm/tools/$TOOL ]; then
-    ln -s /src/$TOOL /src/llvm/tools/$TOOL
+  if [ ! -e $ROOT/src/llvm/tools/$TOOL ]; then
+    ln -s $ROOT/src/$TOOL $ROOT/src/llvm/tools/$TOOL
   fi
 done
 
 for PRJ in $PROJECTS; do
-  if [ ! -e /src/llvm/projects/$PRJ ]; then
-    ln -s /src/$PRJ /src/llvm/projects/$PRJ
+  if [ ! -e $ROOT/src/llvm/projects/$PRJ ]; then
+    ln -s $ROOT/src/$PRJ $ROOT/src/llvm/projects/$PRJ
   fi
 done
 
-if [ ! -d /build/llvm ]; then
-  mkdir /build/llvm || $(echo 'failed to create directory' && exit 1)
+if [ ! -d $ROOT/build/llvm ]; then
+  mkdir $ROOT/build/llvm || $(echo 'failed to create directory' && exit 1)
 fi
 
-cd /build/llvm || $(echo 'failed to change directory' && exit 1)
+cd $ROOT/build/llvm || $(echo 'failed to change directory' && exit 1)
 
 ninja install || exit 42
 
