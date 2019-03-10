@@ -38,4 +38,4 @@ fi
 
 cd $ROOT/build/llvm || $(echo 'failed to change directory' && exit 1)
 
-ninja -j1 || exit 41
+ninja || exit 41
