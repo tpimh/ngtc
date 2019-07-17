@@ -6,7 +6,7 @@ export LANG='C'
 
 stage1 () {
   rm -rf root/src root/build
-  apk add -t .llvmdeps git patch make cmake ninja clang-static clang-dev linux-headers g++ python
+  apk add -t .llvmdeps git patch make cmake ninja clang-static clang-dev linux-headers g++ python libexecinfo-dev
   root/sync.sh
   root/configure.sh
 }

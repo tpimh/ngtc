@@ -1,0 +1,12 @@
+diff --git a/lib/scudo/CMakeLists.txt b/lib/scudo/CMakeLists.txt
+index 9ee615c..5fcb27e 100644
+--- a/lib/scudo/CMakeLists.txt
++++ b/lib/scudo/CMakeLists.txt
+@@ -8,6 +8,7 @@ list(APPEND SCUDO_CFLAGS -fbuiltin)
+ append_rtti_flag(OFF SCUDO_CFLAGS)
+ 
+ set(SCUDO_MINIMAL_DYNAMIC_LIBS ${SANITIZER_COMMON_LINK_LIBS})
++list(APPEND SCUDO_MINIMAL_DYNAMIC_LIBS -lexecinfo)
+ append_list_if(COMPILER_RT_HAS_LIBDL dl SCUDO_MINIMAL_DYNAMIC_LIBS)
+ append_list_if(COMPILER_RT_HAS_LIBRT rt SCUDO_MINIMAL_DYNAMIC_LIBS)
+ append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread SCUDO_MINIMAL_DYNAMIC_LIBS)
