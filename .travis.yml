@@ -2,11 +2,13 @@ language: generic
 
 sudo: required
 
-jobs:
-  include:
-    - stage: configure
-      script: ./build-all.sh configure
-    - stage: build
-      script: ./build-all.sh build
-    - stage: install
-      script: ./build-all.sh install
+services:
+  - docker
+
+script:
+  - |
+    docker run \
+        --rm \
+        --workdir /ngtc \
+        --volume ${TRAVIS_BUILD_DIR}:/ngtc \
+        tpimh/ngtc:latest /bin/sh -c 'root/sync.sh && root/configure.sh && root/build.sh && root/install.sh'
