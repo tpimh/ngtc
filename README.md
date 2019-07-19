@@ -6,15 +6,19 @@ The goal of this project is to build a toolchain that can build Linux kernel, a 
 
 ## Building
 
-Requirements: x86_64 Linux distro with at least 6Gb of RAM and a lot of time.
+Requirements: Docker, at least 6Gb of RAM and a lot of time.
 
-Instructions: run `./build-all.sh`, this will set up the build environment, download toolchain source code and compile it.
+Instructions: `docker run tpimh/ngtc:latest /bin/sh -c 'git clone https://github.com/tpimh/ngtc && cd ngtc && root/sync.sh && root/configure.sh && root/build.sh && root/install.sh'`
 
 ## What is included
 
-- `musl` libc
-- `clang` compiler
-- `lld` linker
+- Clang
+- compiler-rt
+- libc++
+- libc++abi
+- libunwind
+- LLD
+- LLVM
 
 ## What is not included
 
