@@ -1,7 +1,7 @@
-diff --git a/lib/asan/asan_linux.cc b/lib/asan/asan_linux.cc
+diff --git a/lib/asan/asan_linux.cpp b/lib/asan/asan_linux.cpp
 index f918232..dfbb4a7 100644
---- a/lib/asan/asan_linux.cc
-+++ b/lib/asan/asan_linux.cc
+--- a/lib/asan/asan_linux.cpp
++++ b/lib/asan/asan_linux.cpp
 @@ -45,7 +45,7 @@
  #include <link.h>
  #endif
@@ -29,10 +29,10 @@ index f918232..dfbb4a7 100644
  
  #if !SANITIZER_ANDROID
  void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
-diff --git a/lib/interception/interception_linux.cc b/lib/interception/interception_linux.cc
+diff --git a/lib/interception/interception_linux.cpp b/lib/interception/interception_linux.cpp
 index d07f060..e705940 100644
---- a/lib/interception/interception_linux.cc
-+++ b/lib/interception/interception_linux.cc
+--- a/lib/interception/interception_linux.cpp
++++ b/lib/interception/interception_linux.cpp
 @@ -58,8 +58,8 @@ bool InterceptFunction(const char *name, uptr *ptr_to_real, uptr func,
    return addr && (func == wrapper);
  }
@@ -77,10 +77,10 @@ index e578da0..626f961 100644
  
  #endif  // INTERCEPTION_LINUX_H
  #endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
-diff --git a/lib/msan/msan_interceptors.cc b/lib/msan/msan_interceptors.cc
+diff --git a/lib/msan/msan_interceptors.cpp b/lib/msan/msan_interceptors.cpp
 index b055bb7..2015254 100644
---- a/lib/msan/msan_interceptors.cc
-+++ b/lib/msan/msan_interceptors.cc
+--- a/lib/msan/msan_interceptors.cpp
++++ b/lib/msan/msan_interceptors.cpp
 @@ -57,6 +57,9 @@ DECLARE_REAL(SIZE_T, strlen, const char *s)
  DECLARE_REAL(SIZE_T, strnlen, const char *s, SIZE_T maxlen)
  DECLARE_REAL(void *, memcpy, void *dest, const void *src, uptr n)
@@ -91,10 +91,10 @@ index b055bb7..2015254 100644
  
  // True if this is a nested interceptor.
  static THREADLOCAL int in_interceptor_scope;
-diff --git a/lib/msan/msan_linux.cc b/lib/msan/msan_linux.cc
+diff --git a/lib/msan/msan_linux.cpp b/lib/msan/msan_linux.cpp
 index 3b6e6cb..6186260 100644
---- a/lib/msan/msan_linux.cc
-+++ b/lib/msan/msan_linux.cc
+--- a/lib/msan/msan_linux.cpp
++++ b/lib/msan/msan_linux.cpp
 @@ -12,7 +12,7 @@
  //===----------------------------------------------------------------------===//
  
@@ -153,10 +153,10 @@ index 00bb2ae..2c6aba5 100644
  PRE_SYSCALL(prlimit64)(long pid, long resource, const void *new_rlim,
                         void *old_rlim) {
    if (new_rlim) PRE_READ(new_rlim, struct_rlimit64_sz);
-diff --git a/lib/sanitizer_common/sanitizer_linux_libcdep.cc b/lib/sanitizer_common/sanitizer_linux_libcdep.cc
+diff --git a/lib/sanitizer_common/sanitizer_linux_libcdep.cpp b/lib/sanitizer_common/sanitizer_linux_libcdep.cpp
 index 0608898..993186a 100644
---- a/lib/sanitizer_common/sanitizer_linux_libcdep.cc
-+++ b/lib/sanitizer_common/sanitizer_linux_libcdep.cc
+--- a/lib/sanitizer_common/sanitizer_linux_libcdep.cpp
++++ b/lib/sanitizer_common/sanitizer_linux_libcdep.cpp
 @@ -14,7 +14,7 @@
  #include "sanitizer_platform.h"
  
@@ -248,10 +248,10 @@ index 817d24b..1320a8b 100644
  # define SI_LINUX_NOT_ANDROID 1
  #else
  # define SI_LINUX_NOT_ANDROID 0
-diff --git a/lib/sanitizer_common/sanitizer_platform_limits_posix.cc b/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
+diff --git a/lib/sanitizer_common/sanitizer_platform_limits_posix.cpp b/lib/sanitizer_common/sanitizer_platform_limits_posix.cpp
 index b7fa6e8..431e8b2 100644
---- a/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
-+++ b/lib/sanitizer_common/sanitizer_platform_limits_posix.cc
+--- a/lib/sanitizer_common/sanitizer_platform_limits_posix.cpp
++++ b/lib/sanitizer_common/sanitizer_platform_limits_posix.cpp
 @@ -22,6 +22,11 @@
  #ifdef _FILE_OFFSET_BITS
  #undef _FILE_OFFSET_BITS
@@ -401,10 +401,10 @@ index b7fa6e8..431e8b2 100644
  COMPILER_CHECK(sizeof(__sanitizer__obstack_chunk) <= sizeof(_obstack_chunk));
  CHECK_SIZE_AND_OFFSET(_obstack_chunk, limit);
  CHECK_SIZE_AND_OFFSET(_obstack_chunk, prev);
-diff --git a/lib/tsan/rtl/tsan_platform_linux.cc b/lib/tsan/rtl/tsan_platform_linux.cc
+diff --git a/lib/tsan/rtl/tsan_platform_linux.cpp b/lib/tsan/rtl/tsan_platform_linux.cpp
 index c387416..6e6b1b6 100644
---- a/lib/tsan/rtl/tsan_platform_linux.cc
-+++ b/lib/tsan/rtl/tsan_platform_linux.cc
+--- a/lib/tsan/rtl/tsan_platform_linux.cpp
++++ b/lib/tsan/rtl/tsan_platform_linux.cpp
 @@ -319,7 +319,7 @@ void InitializePlatform() {
  // This is required to properly "close" the fds, because we do not see internal
  // closes within glibc. The code is a pure hack.
