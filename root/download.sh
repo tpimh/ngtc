@@ -2,8 +2,8 @@
 
 REPOS='llvm clang lld libunwind compiler-rt libcxx libcxxabi'
 ROOT=$(dirname $(readlink -f "$0"))
-VERSION="9.0.0"
-BASEURL="http://releases.llvm.org/$VERSION/"
+VERSION="9.0.1"
+BASEURL="https://github.com/llvm/llvm-project/releases/download/llvmorg-$VERSION/"
 
 if [ ! -d $ROOT/src ]; then
   mkdir $ROOT/src || $(echo 'failed to create directory' && exit 1)
@@ -13,11 +13,7 @@ cd $ROOT/src || $(echo 'failed to change directory' && exit 1)
 
 for REPO in $REPOS; do
   if [ ! -d $REPO ]; then
-    if [ "$REPO" = "clang" ]; then
-      DIRNAME="cfe-$VERSION.src"
-    else
-      DIRNAME="$REPO-$VERSION.src"
-    fi
+    DIRNAME="$REPO-$VERSION.src"
     FILENAME="$DIRNAME.tar.xz"
     wget $BASEURL/$FILENAME
     tar xf $FILENAME
