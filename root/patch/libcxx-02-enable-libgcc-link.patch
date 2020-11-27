@@ -1,13 +1,13 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 21d0c92..3a137aa 100644
+index 5df3f25..6b62484 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -446,7 +446,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
- # LIBCXX_LIBRARIES: libraries libc++ is linked to.
+@@ -449,7 +449,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
+ #                             These libraries are exposed in the linker script.
  set(LIBCXX_COMPILE_FLAGS "")
  set(LIBCXX_LINK_FLAGS "")
 -set(LIBCXX_LIBRARIES "")
 +set(LIBCXX_LIBRARIES "-lgcc")
+ set(LIBCXX_INTERFACE_LIBRARIES "")
  
  # Include macros for adding and removing libc++ flags.
- include(HandleLibcxxFlags)

@@ -1,8 +1,6 @@
-diff --git a/cmake/Modules/AddCompilerRT.cmake b/cmake/Modules/AddCompilerRT.cmake
-index c464a2c..04e6f90 100644
---- a/cmake/Modules/AddCompilerRT.cmake
-+++ b/cmake/Modules/AddCompilerRT.cmake
-@@ -600,6 +601,8 @@ macro(add_custom_libcxx name prefix)
+--- compiler-rt-9.0.0.src/cmake/Modules/AddCompilerRT.cmake
++++ compiler-rt/cmake/Modules/AddCompilerRT.cmake
+@@ -610,6 +610,8 @@
                 -DLLVM_LIBRARY_OUTPUT_INTDIR=${prefix}/lib
                 -DCOMPILER_RT_LIBCXX_PATH=${COMPILER_RT_LIBCXX_PATH}
                 -DCOMPILER_RT_LIBCXXABI_PATH=${COMPILER_RT_LIBCXXABI_PATH}
