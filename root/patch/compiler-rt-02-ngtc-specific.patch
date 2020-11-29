@@ -1,6 +1,6 @@
---- compiler-rt-9.0.0.src/cmake/Modules/AddCompilerRT.cmake
+--- compiler-rt-10.0.0.src/cmake/Modules/AddCompilerRT.cmake
 +++ compiler-rt/cmake/Modules/AddCompilerRT.cmake
-@@ -610,6 +610,8 @@
+@@ -615,6 +615,8 @@
                 -DLLVM_LIBRARY_OUTPUT_INTDIR=${prefix}/lib
                 -DCOMPILER_RT_LIBCXX_PATH=${COMPILER_RT_LIBCXX_PATH}
                 -DCOMPILER_RT_LIBCXXABI_PATH=${COMPILER_RT_LIBCXXABI_PATH}
