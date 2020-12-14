@@ -2,7 +2,7 @@
 
 REPOS='llvm clang lld libunwind compiler-rt libcxx libcxxabi'
 ROOT=$(dirname $(readlink -f "$0"))
-VERSION="10.0.1"
+VERSION="11.0.0"
 BASEURL="https://github.com/llvm/llvm-project/releases/download/llvmorg-$VERSION/"
 
 if [ ! -d $ROOT/src ]; then
