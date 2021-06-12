@@ -1,6 +1,6 @@
 #!/bin/sh
 
-LLVMREPO='https://git.llvm.org/git'
+LLVMREPO='https://github.com/llvm/llvm-project.git'
 REPOS='llvm clang lld libunwind compiler-rt libcxx libcxxabi'
 ROOT=$(dirname $(readlink -f "$0"))
 
