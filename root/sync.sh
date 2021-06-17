@@ -1,13 +1,13 @@
 #!/bin/sh
 
-LLVMREPO='https://git.llvm.org/git'
+LLVMREPO='https://github.com/llvm/llvm-project.git'
 REPOS='llvm clang lld libunwind compiler-rt libcxx libcxxabi'
 ROOT=$(dirname $(readlink -f "$0"))
 
 clonerepo () {
   echo -n "cloning $1... ";
 
-  REPO="$LLVMREPO/$1/"
+  REPO="https://github.com/llvm/llvm-project.git"
 
   if ! git clone --depth 1 $REPO &>/dev/null; then
     echo fail
